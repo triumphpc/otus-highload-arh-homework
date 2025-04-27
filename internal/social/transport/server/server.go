@@ -2,8 +2,10 @@ package server
 
 import (
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"otus-highload-arh-homework/internal/social/delivery/http"
-	"otus-highload-arh-homework/internal/social/transport/services"
+	"otus-highload-arh-homework/internal/social/transport/service"
 )
 
 type Server struct {
@@ -12,7 +14,7 @@ type Server struct {
 }
 
 func New(
-	authService *services.AuthService,
+	authService *service.AuthService,
 ) *Server {
 	router := gin.Default()
 
@@ -22,6 +24,9 @@ func New(
 
 	// Инициализация handler'ов
 	authHandler := http.NewAuthHandler(authService)
+
+	// Swagger docs route
+	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// Роуты
 	api := router.Group("/api/v1")

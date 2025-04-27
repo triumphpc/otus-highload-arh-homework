@@ -1,27 +1,41 @@
 services:
   app:
-    build: ..
+    build:
+      context: ..
+      dockerfile: docker/app/Dockerfile
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
-    environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - DB_NAME=app_db
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - app-network
+    labels:
+      - "com.example.app=social"
 
   postgres:
     image: postgres:14
-    environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=app_db
+    env_file:
+      - .env
     ports:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+    labels:
+      - "com.example.db=postgres"
 
 volumes:
   pg_data:
+
+networks:
+  app-network:
+    driver: bridge

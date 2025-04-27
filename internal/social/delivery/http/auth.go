@@ -5,10 +5,11 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	_ "otus-highload-arh-homework/docs" // сгенерированный пакет
 	"otus-highload-arh-homework/internal/social/entity"
 	"otus-highload-arh-homework/internal/social/transport"
 	"otus-highload-arh-homework/internal/social/transport/dto"
-	auth2 "otus-highload-arh-homework/internal/social/transport/services"
+	auth2 "otus-highload-arh-homework/internal/social/transport/service"
 )
 
 type AuthHandler struct {
@@ -19,6 +20,18 @@ func NewAuthHandler(authService *auth2.AuthService) *AuthHandler {
 	return &AuthHandler{authService: authService}
 }
 
+// Register godoc
+// @Summary Регистрация нового пользователя
+// @Description Создает нового пользователя и возвращает JWT токен
+// @Tags auth
+// @Accept  json
+// @Produce  json
+// @Param input body dto.RegisterInput true "Данные для регистрации"
+// @Success 201 {object} map[string]interface{} "Успешная регистрация"
+// @Failure 400 {object} map[string]string "Неверные входные данные"
+// @Failure 409 {object} map[string]string "Пользователь уже существует"
+// @Failure 500 {object} map[string]string "Внутренняя ошибка сервера"
+// @Router /api/v1/auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var input dto.RegisterInput
 
