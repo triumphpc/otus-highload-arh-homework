@@ -3,18 +3,22 @@ package service
 import (
 	"context"
 
+	"otus-highload-arh-homework/internal/social/entity"
 	"otus-highload-arh-homework/internal/social/transport/dto"
-	"otus-highload-arh-homework/internal/social/usecase/auth"
 )
+
+type authUserCase interface {
+	Register(ctx context.Context, user *entity.User, password string) (*entity.User, error)
+}
 
 type AuthService struct {
 	jwtService *JWTGenerator
-	uc         *auth.AuthUseCase
+	uc         authUserCase
 }
 
 // NewAuthService создает новый экземпляр AuthService
 func NewAuthService(
-	useCase *auth.AuthUseCase,
+	useCase authUserCase,
 	jwtService *JWTGenerator,
 ) *AuthService {
 	return &AuthService{

@@ -5,7 +5,7 @@ import (
 	"errors"
 
 	"otus-highload-arh-homework/internal/social/entity"
-	repository2 "otus-highload-arh-homework/internal/social/repository"
+	"otus-highload-arh-homework/internal/social/repository"
 )
 
 type passwordHasher interface {
@@ -14,11 +14,11 @@ type passwordHasher interface {
 }
 
 type AuthUseCase struct {
-	repo   repository2.UserRepository
+	repo   repository.UserRepository
 	hasher passwordHasher
 }
 
-func NewAuth(repo repository2.UserRepository, hasher passwordHasher) *AuthUseCase {
+func NewAuth(repo repository.UserRepository, hasher passwordHasher) *AuthUseCase {
 	return &AuthUseCase{repo: repo, hasher: hasher}
 }
 
@@ -29,8 +29,8 @@ func (uc *AuthUseCase) Register(ctx context.Context, user *entity.User, password
 	}
 
 	// 2. Проверка уникальности email
-	if _, err := uc.repo.GetByEmail(ctx, user.Email); !errors.Is(err, repository2.ErrUserNotFound) {
-		return nil, repository2.ErrUserAlreadyExists
+	if _, err := uc.repo.GetByEmail(ctx, user.Email); !errors.Is(err, repository.ErrUserNotFound) {
+		return nil, repository.ErrUserAlreadyExists
 	}
 
 	// 3. Хеширование пароля

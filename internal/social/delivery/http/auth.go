@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	_ "otus-highload-arh-homework/docs" // сгенерированный пакет
+	_ "otus-highload-arh-homework/docs"
 	"otus-highload-arh-homework/internal/social/entity"
 	"otus-highload-arh-homework/internal/social/transport"
 	"otus-highload-arh-homework/internal/social/transport/dto"
@@ -27,11 +27,11 @@ func NewAuthHandler(authService *auth2.AuthService) *AuthHandler {
 // @Accept  json
 // @Produce  json
 // @Param input body dto.RegisterInput true "Данные для регистрации"
-// @Success 201 {object} map[string]interface{} "Успешная регистрация"
-// @Failure 400 {object} map[string]string "Неверные входные данные"
-// @Failure 409 {object} map[string]string "Пользователь уже существует"
-// @Failure 500 {object} map[string]string "Внутренняя ошибка сервера"
-// @Router /api/v1/auth/register [post]
+// @Success 201 {object} dto.RegisterSuccessResponse "Успешная регистрация"
+// @Failure 400 {object} dto.ValidationErrorResponse "Неверные входные данные"
+// @Failure 409 {object} dto.ErrorResponse "Пользователь уже существует"
+// @Failure 500 {object} dto.ErrorResponse "Внутренняя ошибка сервера"
+// @Router /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var input dto.RegisterInput
 

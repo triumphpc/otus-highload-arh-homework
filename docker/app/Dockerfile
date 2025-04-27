@@ -12,6 +12,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -o /social-app ./cmd/app/main.go
 FROM alpine:latest
 COPY --from=builder /social-app /social-app
 COPY --from=builder /app/docs /docs
+COPY --from=builder /app/migrations /migrations
 EXPOSE 8080
 
 CMD ["/social-app"]

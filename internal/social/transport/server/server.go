@@ -11,10 +11,14 @@ import (
 type Server struct {
 	router      *gin.Engine
 	authHandler *http.AuthHandler
+	userHandler *http.UserHandler
+	jwtService  *service.JWTGenerator
 }
 
 func New(
 	authService *service.AuthService,
+	userService *service.UserService,
+	jwtService *service.JWTGenerator,
 ) *Server {
 	router := gin.Default()
 
@@ -24,6 +28,7 @@ func New(
 
 	// Инициализация handler'ов
 	authHandler := http.NewAuthHandler(authService)
+	userHandler := http.NewUserHandler(userService)
 
 	// Swagger docs route
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -36,11 +41,19 @@ func New(
 			authGroup.POST("/register", authHandler.Register)
 			// authGroup.POST("/login", authHandler.Login)
 		}
+
+		userGroup := api.Group("/user")
+		userGroup.Use(http.AuthMiddleware(jwtService))
+		{
+			userGroup.GET("/get/:id", userHandler.GetUser)
+		}
 	}
 
 	return &Server{
 		router:      router,
 		authHandler: authHandler,
+		userHandler: userHandler,
+		jwtService:  jwtService,
 	}
 }
 
