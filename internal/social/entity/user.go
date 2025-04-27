@@ -14,6 +14,7 @@ type User struct {
 	ID        int
 	FirstName string
 	LastName  string
+	Email     string
 	BirthDate time.Time
 	Gender    Gender
 	Interests []string

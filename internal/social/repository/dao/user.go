@@ -1,4 +1,4 @@
-package dto
+package dao
 
 import (
 	"time"
@@ -11,6 +11,7 @@ type UserDAO struct {
 	ID        int       `db:"id"`
 	FirstName string    `db:"first_name"`
 	LastName  string    `db:"last_name"`
+	Email     string    `db:"email"`
 	BirthDate time.Time `db:"birth_date"`
 	Gender    string    `db:"gender"`
 	Interests []string  `db:"interests"`
@@ -35,9 +36,9 @@ func ToEntity(dao UserDAO) entity.User {
 // FromEntity преобразует бизнес-сущность в DAO
 func FromEntity(user entity.User) UserDAO {
 	return UserDAO{
-		ID:        user.ID,
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
+		Email:     user.Email,
 		BirthDate: user.BirthDate,
 		Gender:    string(user.Gender),
 		Interests: user.Interests,

@@ -6,11 +6,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	authInternal "otus-highload-arh-homework/internal/social/auth"
 	"otus-highload-arh-homework/internal/social/config"
-	"otus-highload-arh-homework/internal/social/usecase/repository/postgres"
+	"otus-highload-arh-homework/internal/social/repository/postgres"
+	"otus-highload-arh-homework/internal/social/transport/server"
+	authInternal "otus-highload-arh-homework/internal/social/transport/services"
+	authUC "otus-highload-arh-homework/internal/social/usecase/auth"
 	"otus-highload-arh-homework/pkg/auth"
 	"otus-highload-arh-homework/pkg/pg"
 )
@@ -19,7 +20,7 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	// 1. Инициализация PG
+	// 1. Инициализация ресурсов
 	pgPool, err := pg.New(ctx, pg.Load())
 	if err != nil {
 		log.Fatalf("Failed to init PG: %v", err)
@@ -28,28 +29,22 @@ func main() {
 
 	cfg := config.Load()
 
-	// 2. Auth dependencies
+	// 2. Вспомогательные сервисы
 	hasher := auth.NewBcryptHasher(cfg.Auth.HashCost)
-	jwtService := authInternal.NewJWTGenerator("your-secret-key", 24*time.Hour)
-	authService := auth.NewAuthService(userRepo, hasher, jwtService)
 
-	// 2. Инициализация слоёв
+	// 3. Репозитории
 	userRepo := postgres.NewUserRepository(pgPool)
-	userUC := user.NewUseCase(userRepo)
-	authUC := auth.NewUseCase(userRepo)
 
-	// Handlers
-	authHandler := http.NewAuthHandler(authService)
-	userHandler := http.NewUserHandler(userRepo)
+	// 4. Бизнес слои
+	authUseCase := authUC.NewAuth(userRepo, hasher)
 
-	//userRepo := postgres.NewUserRepo(pg)
-	//userUC := user.New(userRepo)
-	//authUC := auth.New(userRepo)
-	//
-	//// Роутер
-	//r := http.NewRouter(authUC, userUC)
-	//
-	//// Запуск сервера
-	//log.Printf("Server started on :%d", cfg.HTTP.Port)
-	//http.ListenAndServe(":"+cfg.HTTP.Port, r)
+	// 5. Сервисы транспортного уровня
+	jwtService := authInternal.NewJWTGenerator(cfg.Auth.JwtSecretKey, cfg.Auth.JwtDuration)
+	authService := authInternal.NewAuthService(authUseCase, jwtService)
+
+	// Запуск сервера
+	srv := server.New(authService)
+	if err := srv.Run(":8080"); err != nil {
+		panic(err)
+	}
 }

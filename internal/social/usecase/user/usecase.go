@@ -6,17 +6,17 @@ import (
 	"time"
 
 	"otus-highload-arh-homework/internal/social/entity"
-	"otus-highload-arh-homework/internal/social/usecase/repository"
+	repository2 "otus-highload-arh-homework/internal/social/repository"
 )
 
 type useCase struct {
-	repo repository.UserRepository
+	repo repository2.UserRepository
 	// Добавим crypto-сервис для хеширования/проверки паролей
 	hasher PasswordHasher
 }
 
 // New создает экземпляр UseCase
-func New(repo repository.UserRepository, hasher PasswordHasher) UseCase {
+func New(repo repository2.UserRepository, hasher PasswordHasher) UseCase {
 	return &useCase{
 		repo:   repo,
 		hasher: hasher,
@@ -34,8 +34,8 @@ func (uc *useCase) Register(ctx context.Context, user *entity.User) error {
 	}
 
 	// Проверка уникальности email
-	if _, err := uc.repo.GetByEmail(ctx, user.Email); !errors.Is(err, repository.ErrUserNotFound) {
-		return repository.ErrUserAlreadyExists
+	if _, err := uc.repo.GetByEmail(ctx, user.Email); !errors.Is(err, repository2.ErrUserNotFound) {
+		return repository2.ErrUserAlreadyExists
 	}
 
 	// Хеширование пароля

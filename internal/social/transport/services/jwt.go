@@ -1,9 +1,10 @@
-package auth
+package services
 
 import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"otus-highload-arh-homework/internal/social/transport"
 )
 
 type JWTGenerator struct {
@@ -40,12 +41,12 @@ func (j *JWTGenerator) ValidateToken(tokenStr string) (int, error) {
 
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		return 0, ErrInvalidToken
+		return 0, transport.ErrInvalidToken
 	}
 
 	userID, ok := claims["sub"].(float64) // JWT числа всегда float64
 	if !ok {
-		return 0, ErrInvalidToken
+		return 0, transport.ErrInvalidToken
 	}
 
 	return int(userID), nil

@@ -6,10 +6,12 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	repository2 "otus-highload-arh-homework/internal/social/repository"
+	"otus-highload-arh-homework/internal/social/repository/dao"
+
+	"github.com/lib/pq"
 
 	"otus-highload-arh-homework/internal/social/entity"
-	"otus-highload-arh-homework/internal/social/usecase/repository"
-	"otus-highload-arh-homework/internal/social/usecase/repository/dto"
 )
 
 type UserRepository struct {
@@ -17,32 +19,34 @@ type UserRepository struct {
 }
 
 // NewUserRepository создает новый экземпляр UserRepository
-func NewUserRepository(pool *pgxpool.Pool) repository.UserRepository {
+func NewUserRepository(pool *pgxpool.Pool) repository2.UserRepository {
 	return &UserRepository{pool: pool}
 }
 
-func (r *UserRepository) Create(ctx context.Context, user *entity.User) error {
+func (r *UserRepository) Create(ctx context.Context, user *entity.User, passwordHash string) error {
 	const query = `
-		INSERT INTO users (
-			first_name, last_name, birth_date, gender, interests, city
-		) VALUES ($1, $2, $3, $4, $5, $6)
-		RETURNING id, created_at, updated_at
-	`
+        INSERT INTO users (
+            first_name, last_name, email, birth_date, gender, interests, city, password_hash
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        RETURNING id, created_at, updated_at
+    `
 
-	dao := dto.FromEntity(*user)
+	dao := dao.FromEntity(*user)
 
 	err := r.pool.QueryRow(ctx, query,
 		dao.FirstName,
 		dao.LastName,
+		dao.Email,
 		dao.BirthDate,
 		dao.Gender,
-		dao.Interests,
+		pq.Array(dao.Interests),
 		dao.City,
+		passwordHash,
 	).Scan(&dao.ID, &dao.CreatedAt, &dao.UpdatedAt)
 
 	if err != nil {
 		if isDuplicateKeyError(err) {
-			return repository.ErrUserAlreadyExists
+			return repository2.ErrUserAlreadyExists
 		}
 		return err
 	}
@@ -72,6 +76,11 @@ func (r *UserRepository) Update(ctx context.Context, user *entity.User) error {
 }
 
 func (r *UserRepository) Delete(ctx context.Context, id int) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*entity.User, error) {
 	//TODO implement me
 	panic("implement me")
 }
