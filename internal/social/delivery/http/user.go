@@ -2,6 +2,8 @@ package http
 
 import (
 	"errors"
+	"fmt"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -17,8 +19,8 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 }
 
 // GetUser godoc
-// @Summary Get user by ID
-// @Description Get user details
+// @Summary Пользователь по ID
+// @Description Получить информацию по пользователю
 // @Tags user
 // @Accept json
 // @Produce json
@@ -29,11 +31,12 @@ func NewUserHandler(userService *service.UserService) *UserHandler {
 // @Failure 403 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
 // @Failure 500 {object} dto.ErrorResponse
-// @Router /api/v1/user/{id} [get]
+// @Router /user/get/{id} [get]
 func (h *UserHandler) GetUser(c *gin.Context) {
 	userID := c.Param("id")
+	subID := c.Value("userID").(int)
 
-	user, err := h.userService.GetUserByID(c.Request.Context(), userID)
+	user, err := h.userService.GetUserByID(c.Request.Context(), subID, userID)
 	if err != nil {
 		if errors.Is(err, service.ErrUserNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
@@ -43,7 +46,9 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Permission denied"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+
+		log.Println(fmt.Errorf("GetUserByID: %w", err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error", "details": err.Error()})
 		return
 	}
 

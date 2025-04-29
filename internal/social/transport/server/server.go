@@ -1,6 +1,10 @@
 package server
 
 import (
+	"context"
+	"errors"
+	ht "net/http"
+
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -13,6 +17,7 @@ type Server struct {
 	authHandler *http.AuthHandler
 	userHandler *http.UserHandler
 	jwtService  *service.JWTGenerator
+	httpServer  *ht.Server
 }
 
 func New(
@@ -39,7 +44,7 @@ func New(
 		authGroup := api.Group("/auth")
 		{
 			authGroup.POST("/register", authHandler.Register)
-			// authGroup.POST("/login", authHandler.Login)
+			authGroup.POST("/login", authHandler.Login)
 		}
 
 		userGroup := api.Group("/user")
@@ -57,6 +62,24 @@ func New(
 	}
 }
 
+// Run запускает сервер с поддержкой graceful shutdown
 func (s *Server) Run(addr string) error {
-	return s.router.Run(addr)
+	s.httpServer = &ht.Server{
+		Addr:    addr,
+		Handler: s.router,
+	}
+
+	if err := s.httpServer.ListenAndServe(); err != nil && !errors.Is(err, ht.ErrServerClosed) {
+		return err
+	}
+
+	return nil
+}
+
+// Shutdown корректно останавливает сервер с таймаутом
+func (s *Server) Shutdown(ctx context.Context) error {
+	if s.httpServer == nil {
+		return nil
+	}
+	return s.httpServer.Shutdown(ctx)
 }

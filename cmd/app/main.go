@@ -5,15 +5,18 @@ import (
 	"database/sql"
 	"errors"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"otus-highload-arh-homework/internal/social/config"
 	"otus-highload-arh-homework/internal/social/repository/postgres"
 	"otus-highload-arh-homework/internal/social/transport/server"
 	authInternal "otus-highload-arh-homework/internal/social/transport/service"
 	authUC "otus-highload-arh-homework/internal/social/usecase/auth"
+	userUC "otus-highload-arh-homework/internal/social/usecase/user"
 	"otus-highload-arh-homework/pkg/auth"
 	"otus-highload-arh-homework/pkg/pg"
 
@@ -35,6 +38,7 @@ import (
 // @schemes http
 
 func main() {
+	log.Println("Starting application...")
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
@@ -59,15 +63,35 @@ func main() {
 
 	// 4. Бизнес слои
 	authUseCase := authUC.NewAuth(userRepo, hasher)
+	userUserCase := userUC.New(userRepo)
 
 	// 5. Сервисы транспортного уровня
 	jwtService := authInternal.NewJWTGenerator(cfg.Auth.JwtSecretKey, cfg.Auth.JwtDuration)
 	authService := authInternal.NewAuthService(authUseCase, jwtService)
+	userService := authInternal.NewUserService(userUserCase, jwtService)
+
+	srv := server.New(authService, userService, jwtService)
 
 	// Запуск сервера
-	srv := server.New(authService)
-	if err := srv.Run(":8080"); err != nil {
-		panic(err)
+	go func() {
+		if err := srv.Run(cfg.HTTP.Port); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("Server error: %v", err)
+		}
+	}()
+
+	log.Println("Server started. Press Ctrl+C to stop.")
+
+	// Ожидаем сигнал завершения
+	<-ctx.Done()
+
+	// Graceful shutdown (даём 5 секунд на завершение операций)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer shutdownCancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("Server shutdown error: %v", err)
+	} else {
+		log.Println("Server stopped gracefully")
 	}
 }
 

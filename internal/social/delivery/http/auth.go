@@ -2,6 +2,7 @@ package http
 
 import (
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -41,6 +42,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 			"error":   "Invalid input data",
 			"details": err.Error(),
 		})
+		log.Println(err)
 		return
 	}
 
@@ -59,6 +61,7 @@ func (h *AuthHandler) Register(c *gin.Context) {
 }
 
 func (h *AuthHandler) handleAuthError(c *gin.Context, err error) {
+	log.Println(err)
 	switch {
 	case errors.Is(err, transport.ErrEmailAlreadyExists):
 		c.JSON(http.StatusConflict, gin.H{
@@ -70,7 +73,46 @@ func (h *AuthHandler) handleAuthError(c *gin.Context, err error) {
 		})
 	default:
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Internal server error",
+			"error":   "Internal server error",
+			"details": err.Error(),
 		})
 	}
+}
+
+// Login godoc
+// @Summary Аутентификация пользователя
+// @Description Возвращает JWT токен для аутентификации
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param input body dto.LoginInput true "Данные для входа"
+// @Success 200 {object} dto.RegisterSuccessResponse "Успешный вход"
+// @Failure 400 {object} dto.ErrorResponse "Неверные входные данные"
+// @Failure 401 {object} dto.ErrorResponse "Неверный email или пароль"
+// @Failure 500 {object} dto.ErrorResponse "Внутренняя ошибка сервера"
+// @Router /auth/login [post]
+func (h *AuthHandler) Login(c *gin.Context) {
+	var input dto.LoginInput
+
+	// Парсинг и валидация входных данных
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid input data",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Вызов сервиса
+	userResponse, token, err := h.authService.Login(c.Request.Context(), input.Email, input.Password)
+	if err != nil {
+		h.handleAuthError(c, err)
+		return
+	}
+
+	// Успешный ответ
+	c.JSON(http.StatusOK, gin.H{
+		"user":  userResponse,
+		"token": token,
+	})
 }

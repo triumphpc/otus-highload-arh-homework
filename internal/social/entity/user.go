@@ -1,6 +1,9 @@
 package entity
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
 
 type Gender string
 
@@ -22,8 +25,19 @@ type User struct {
 
 	CreatedAt time.Time
 	UpdatedAt time.Time
+
+	PasswordHash string
 }
 
 func (u *User) IsAdult() bool {
 	return time.Since(u.BirthDate).Hours()/24/365 >= 18
+}
+
+func (u *User) IsValid() (bool, error) {
+	switch u.Gender {
+	case GenderMale, GenderFemale, GenderOther:
+		return true, nil
+	default:
+		return false, fmt.Errorf("invalid gender")
+	}
 }

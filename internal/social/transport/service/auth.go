@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"otus-highload-arh-homework/internal/social/entity"
 	"otus-highload-arh-homework/internal/social/transport/dto"
@@ -9,6 +10,7 @@ import (
 
 type authUserCase interface {
 	Register(ctx context.Context, user *entity.User, password string) (*entity.User, error)
+	Login(ctx context.Context, email, password string) (*entity.User, error)
 }
 
 type AuthService struct {
@@ -32,6 +34,11 @@ func (s *AuthService) Register(ctx context.Context, input dto.RegisterInput) (*d
 	// 1. Преобразование DTO -> Entity
 	user := dto.ConvertRegisterInputToUser(input)
 
+	ok, err := user.IsValid()
+	if !ok || err != nil {
+		return nil, "", fmt.Errorf("invalid user %w", err)
+	}
+
 	// 2. Вызов бизнес-логики
 	createdUser, err := s.uc.Register(ctx, user, input.Password)
 	if err != nil {
@@ -50,42 +57,22 @@ func (s *AuthService) Register(ctx context.Context, input dto.RegisterInput) (*d
 	return &response, token, nil
 }
 
-//
-//// Login аутентифицирует пользователя
-//func (s *AuthService) Login(ctx context.Context, email, password string) (*entity.User, string, error) {
-//	// Находим пользователя
-//	user, err := s.userRepo.GetByEmail(ctx, email)
-//	if err != nil {
-//		if errors.Is(err, repository.ErrUserNotFound) {
-//			return nil, "", ErrUserNotFound
-//		}
-//		return nil, "", err
-//	}
-//
-//	// Проверяем пароль
-//	if !s.hasher.Check(password, user.PasswordHash) {
-//		return nil, "", ErrInvalidCredentials
-//	}
-//
-//	// Генерируем токен
-//	token, err := s.jwtService.GenerateToken(user.ID)
-//	if err != nil {
-//		return nil, "", err
-//	}
-//
-//	return user, token, nil
-//}
-//
-//// VerifyToken проверяет JWT токен
-//func (s *AuthService) VerifyToken(tokenStr string) (int, error) {
-//	return s.jwtService.ValidateToken(tokenStr)
-//}
-//
-//func (s *AuthService) GetUserProfile(ctx context.Context, userID int) (dto2.UserResponse, error) {
-//	user, err := s.userRepo.GetByID(ctx, userID)
-//	if err != nil {
-//		return dto2.UserResponse{}, err
-//	}
-//
-//	return dto2.ConvertUserToResponse(user), nil
-//}
+// Login аутентифицирует пользователя
+func (s *AuthService) Login(ctx context.Context, email, password string) (*dto.UserResponse, string, error) {
+	// 1. Вызов бизнес-логики
+	user, err := s.uc.Login(ctx, email, password)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// 2. Генерация токена
+	token, err := s.jwtService.GenerateToken(user.ID)
+	if err != nil {
+		return nil, "", err
+	}
+
+	// 3. Преобразование в ответ
+	response := dto.ConvertUserToResponse(user)
+
+	return &response, token, nil
+}

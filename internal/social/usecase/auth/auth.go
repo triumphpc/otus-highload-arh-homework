@@ -46,3 +46,22 @@ func (uc *AuthUseCase) Register(ctx context.Context, user *entity.User, password
 
 	return user, nil
 }
+
+// Login выполняет аутентификацию пользователя
+func (uc *AuthUseCase) Login(ctx context.Context, email, password string) (*entity.User, error) {
+	// 1. Находим пользователя по email
+	user, err := uc.repo.GetByEmail(ctx, email)
+	if err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return nil, ErrInvalidCredentials
+		}
+		return nil, err
+	}
+
+	// 2. Проверяем пароль
+	if !uc.hasher.Check(password, user.PasswordHash) {
+		return nil, ErrInvalidCredentials
+	}
+
+	return user, nil
+}

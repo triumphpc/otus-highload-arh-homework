@@ -49,5 +49,6 @@ type ValidationErrorResponse struct {
 
 // Внутренняя ошибка сервера
 type ErrorResponse struct {
-	Error string `json:"error"`
+	Error   string `json:"error"`
+	Details string `json:"details"`
 }

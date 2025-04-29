@@ -14,8 +14,8 @@ CREATE TABLE users (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_city ON users(city);
+--CREATE INDEX idx_users_email ON users(email);
+--CREATE INDEX idx_users_city ON users(city);
 -- +goose StatementEnd
 
 -- +goose Down
