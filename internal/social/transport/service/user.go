@@ -14,6 +14,7 @@ import (
 
 type userUserCase interface {
 	GetByID(ctx context.Context, id int) (*entity.User, error)
+	Search(ctx context.Context, firstName, lastName string) ([]*entity.User, error)
 }
 
 type UserService struct {
@@ -60,4 +61,25 @@ func (s *UserService) GetUserByID(ctx context.Context, subID int, requestID stri
 	// Преобразование в DTO
 	response := dto.ConvertUserToResponse(user)
 	return &response, nil
+}
+
+// SearchUsers возвращает список пользователей по имени и фамилии
+func (s *UserService) SearchUsers(ctx context.Context, firstName, lastName string) ([]dto.UserResponse, error) {
+	// Валидация параметров
+	if len(firstName) < 2 || len(lastName) < 2 {
+		return nil, errors.New("search query must be at least 2 characters long")
+	}
+
+	users, err := s.userUC.Search(ctx, firstName, lastName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search users: %w", err)
+	}
+
+	// Преобразование в DTO
+	var response []dto.UserResponse
+	for _, user := range users {
+		response = append(response, dto.ConvertUserToResponse(user))
+	}
+
+	return response, nil
 }

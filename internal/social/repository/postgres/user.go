@@ -164,3 +164,69 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*entity.
 
 	return &user, nil
 }
+
+// Search - поиск по имени и фамилии
+func (r *UserRepository) Search(ctx context.Context, firstName, lastName string) ([]*entity.User, error) {
+	const query = `
+        SELECT 
+            id, 
+            first_name, 
+            last_name, 
+            email, 
+            birth_date, 
+            gender, 
+            interests, 
+            city, 
+            created_at
+        FROM users 
+        WHERE first_name ILIKE $1 || '%' 
+        AND last_name ILIKE $2 || '%'
+        LIMIT 100
+    `
+
+	rows, err := r.pool.Query(ctx, query, firstName, lastName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to search users: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*entity.User
+	for rows.Next() {
+		var user entity.User
+		var interests []sql.NullString
+
+		err := rows.Scan(
+			&user.ID,
+			&user.FirstName,
+			&user.LastName,
+			&user.Email,
+			&user.BirthDate,
+			&user.Gender,
+			&interests,
+			&user.City,
+			&user.CreatedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan user: %w", err)
+		}
+
+		// Преобразование интересов
+		for _, interest := range interests {
+			if interest.Valid {
+				user.Interests = append(user.Interests, interest.String)
+			}
+		}
+
+		users = append(users, &user)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	if len(users) == 0 {
+		return nil, repository.ErrUserNotFound
+	}
+
+	return users, nil
+}
