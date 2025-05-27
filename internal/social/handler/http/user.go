@@ -54,3 +54,30 @@ func (h *UserHandler) GetUser(c *gin.Context) {
 
 	c.JSON(http.StatusOK, user)
 }
+
+// SearchUsers godoc
+// @Summary Поиск пользователей
+// @Description Поиск анкет пользователей по имени и фамилии
+// @Tags user
+// @Accept json
+// @Produce json
+// @Param first_name query string true "Часть имени для поиска"
+// @Param last_name query string true "Часть фамилии для поиска"
+// @Security ApiKeyAuth
+// @Success 200 {array} dto.UserResponse
+// @Failure 400 {object} dto.ErrorResponse
+// @Failure 500 {object} dto.ErrorResponse
+// @Router /user/search [get]
+func (h *UserHandler) SearchUsers(c *gin.Context) {
+	firstName := c.Query("first_name")
+	lastName := c.Query("last_name")
+
+	users, err := h.userService.SearchUsers(c.Request.Context(), firstName, lastName)
+	if err != nil {
+		log.Println(fmt.Errorf("SearchUsers: %w", err))
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, users)
+}

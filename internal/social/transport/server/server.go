@@ -6,10 +6,12 @@ import (
 	ht "net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"otus-highload-arh-homework/internal/social/delivery/http"
+	"otus-highload-arh-homework/internal/social/handler/http"
 	"otus-highload-arh-homework/internal/social/transport/service"
+	"otus-highload-arh-homework/pkg/clients/prometheus"
 )
 
 type Server struct {
@@ -38,6 +40,10 @@ func New(
 	// Swagger docs route
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+	// Регистрируем метрики
+	router.Use(prometheus.MetricsMiddleware())
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
 	// Роуты
 	api := router.Group("/api/v1")
 	{
@@ -51,6 +57,7 @@ func New(
 		userGroup.Use(http.AuthMiddleware(jwtService))
 		{
 			userGroup.GET("/get/:id", userHandler.GetUser)
+			userGroup.GET("/search", userHandler.SearchUsers)
 		}
 	}
 

@@ -36,3 +36,14 @@ swagger:
 	@echo "Generating Swagger docs..."
 	@swag init -g ./cmd/app/main.go -o ./docs
 	@echo "Swagger docs generated in ./docs"
+
+# Команды для работы с seeder
+.PHONY: seed-db
+seed-db: run-docker
+	@echo "Starting database seeding..."
+	docker compose --file docker/compose.yml --profile seed up -d db-seeder
+
+.PHONY: load
+load: run-docker
+	@echo "Starting loading test..."
+	/bin/bash ./tests/load/load.sh
