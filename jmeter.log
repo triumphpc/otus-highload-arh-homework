@@ -1,0 +1,87 @@
+2025-06-05 21:29:06,804 INFO o.a.j.u.JMeterUtils: Setting Locale to en_EN
+2025-06-05 21:29:06,823 INFO o.a.j.JMeter: Loading user properties from: /opt/homebrew/Cellar/jmeter/5.6.3/libexec/bin/user.properties
+2025-06-05 21:29:06,824 INFO o.a.j.JMeter: Loading system properties from: /opt/homebrew/Cellar/jmeter/5.6.3/libexec/bin/system.properties
+2025-06-05 21:29:06,827 INFO o.a.j.JMeter: Copyright (c) 1998-2024 The Apache Software Foundation
+2025-06-05 21:29:06,827 INFO o.a.j.JMeter: Version 5.6.3
+2025-06-05 21:29:06,827 INFO o.a.j.JMeter: java.version=21.0.7
+2025-06-05 21:29:06,827 INFO o.a.j.JMeter: java.vm.name=OpenJDK 64-Bit Server VM
+2025-06-05 21:29:06,827 INFO o.a.j.JMeter: os.name=Mac OS X
+2025-06-05 21:29:06,827 INFO o.a.j.JMeter: os.arch=aarch64
+2025-06-05 21:29:06,827 INFO o.a.j.JMeter: os.version=15.5
+2025-06-05 21:29:06,827 INFO o.a.j.JMeter: file.encoding=UTF-8
+2025-06-05 21:29:06,828 INFO o.a.j.JMeter: java.awt.headless=null
+2025-06-05 21:29:06,828 INFO o.a.j.JMeter: Max memory     =1073741824
+2025-06-05 21:29:06,828 INFO o.a.j.JMeter: Available Processors =10
+2025-06-05 21:29:06,834 INFO o.a.j.JMeter: Default Locale=English (EN)
+2025-06-05 21:29:06,835 INFO o.a.j.JMeter: JMeter  Locale=English (EN)
+2025-06-05 21:29:06,835 INFO o.a.j.JMeter: JMeterHome=/opt/homebrew/Cellar/jmeter/5.6.3/libexec
+2025-06-05 21:29:06,835 INFO o.a.j.JMeter: user.dir  =/Users/s.vrulin/Devel/otus-highload-arh-homework
+2025-06-05 21:29:06,835 INFO o.a.j.JMeter: PWD       =/Users/s.vrulin/Devel/otus-highload-arh-homework
+2025-06-05 21:29:06,853 INFO o.a.j.JMeter: IP: 100.96.163.12 Name: s-vrulin FullName: 100.96.163.12
+2025-06-05 21:29:06,862 INFO o.a.j.JMeter: Loaded icon properties from org/apache/jmeter/images/icon.properties
+2025-06-05 21:29:07,607 INFO o.a.j.JMeterGuiLauncher: Setting LAF to: com.github.weisj.darklaf.DarkLaf:com.github.weisj.darklaf.theme.DarculaTheme
+2025-06-05 21:29:09,348 INFO o.a.j.r.ClassFinder: Will scan jar /opt/homebrew/Cellar/jmeter/5.6.3/libexec/lib/ext/jmeter-plugins-manager-1.9.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.gui.action.Command], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-06-05 21:29:09,424 INFO o.a.j.r.ClassFinder: Will scan jar /opt/homebrew/Cellar/jmeter/5.6.3/libexec/lib/ext/jmeter-plugins-manager-1.9.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.gui.plugin.MenuCreator], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-06-05 21:29:09,536 INFO o.j.r.JARSourceHTTP: Found cached repo
+2025-06-05 21:29:09,646 INFO o.j.r.PluginManager: Plugins Status: [jpgc-plugins-manager=1.9, jmeter-core=5.6.3, jmeter-ftp=5.6.3, jmeter-http=5.6.3, jmeter-jdbc=5.6.3, jmeter-jms=5.6.3, jmeter-junit=5.6.3, jmeter-java=5.6.3, jmeter-ldap=5.6.3, jmeter-mail=5.6.3, jmeter-mongodb=5.6.3, jmeter-native=5.6.3, jmeter-tcp=5.6.3, jmeter-components=5.6.3]
+2025-06-05 21:29:09,647 INFO o.j.r.PluginManagerMenuItem: Plugins Manager has upgrades: [jpgc-plugins-manager]
+2025-06-05 21:29:18,130 INFO o.a.j.s.FileServer: Default base='/Users/s.vrulin/Devel/otus-highload-arh-homework'
+2025-06-05 21:29:18,135 INFO o.a.j.g.a.Load: Loading file: /Users/s.vrulin/Devel/otus-highload-arh-homework/tests/load2/HTTP Request.jmx
+2025-06-05 21:29:18,135 INFO o.a.j.s.FileServer: Set new base='/Users/s.vrulin/Devel/otus-highload-arh-homework/tests/load2'
+2025-06-05 21:29:18,256 INFO o.a.j.s.SaveService: Testplan (JMX) version: 2.2. Testlog (JTL) version: 2.2
+2025-06-05 21:29:18,262 INFO o.a.j.s.SaveService: Using SaveService properties version 5.0
+2025-06-05 21:29:18,263 INFO o.a.j.s.SaveService: Using SaveService properties file encoding UTF-8
+2025-06-05 21:29:18,263 INFO o.a.j.s.SaveService: Loading file: /Users/s.vrulin/Devel/otus-highload-arh-homework/tests/load2/HTTP Request.jmx
+2025-06-05 21:29:18,322 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/html is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2025-06-05 21:29:18,322 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for application/xhtml+xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2025-06-05 21:29:18,322 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for application/xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2025-06-05 21:29:18,322 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/xml is org.apache.jmeter.protocol.http.parser.LagartoBasedHtmlParser
+2025-06-05 21:29:18,322 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/vnd.wap.wml is org.apache.jmeter.protocol.http.parser.RegexpHTMLParser
+2025-06-05 21:29:18,322 INFO o.a.j.p.h.s.HTTPSamplerBase: Parser for text/css is org.apache.jmeter.protocol.http.parser.CssParser
+2025-06-05 21:29:18,752 INFO o.a.j.e.KeyToolUtils: keytool found at 'keytool'
+2025-06-05 21:29:18,752 INFO o.a.j.p.h.p.ProxyControl: HTTP(S) Test Script Recorder SSL Proxy will use keys that support embedded 3rd party resources in file /opt/homebrew/Cellar/jmeter/5.6.3/libexec/bin/proxyserver.jks
+2025-06-05 21:29:18,785 INFO o.a.j.s.SampleResult: Note: Sample TimeStamps are START times
+2025-06-05 21:29:18,786 INFO o.a.j.s.SampleResult: sampleresult.default.encoding is set to UTF-8
+2025-06-05 21:29:18,786 INFO o.a.j.s.SampleResult: sampleresult.useNanoTime=true
+2025-06-05 21:29:18,786 INFO o.a.j.s.SampleResult: sampleresult.nanoThreadSleep=5000
+2025-06-05 21:29:18,855 INFO o.a.j.r.ClassFinder: Will scan jar /opt/homebrew/Cellar/jmeter/5.6.3/libexec/lib/ext/jmeter-plugins-manager-1.9.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.visualizers.ResultRenderer], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-06-05 21:29:18,908 INFO o.a.j.r.ClassFinder: Will scan jar /opt/homebrew/Cellar/jmeter/5.6.3/libexec/lib/ext/jmeter-plugins-manager-1.9.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.visualizers.RequestView], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-06-05 21:29:19,138 INFO o.a.j.r.ClassFinder: Will scan jar /opt/homebrew/Cellar/jmeter/5.6.3/libexec/lib/ext/jmeter-plugins-manager-1.9.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.visualizers.ResultRenderer], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-06-05 21:29:19,147 INFO o.a.j.r.ClassFinder: Will scan jar /opt/homebrew/Cellar/jmeter/5.6.3/libexec/lib/ext/jmeter-plugins-manager-1.9.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.visualizers.RequestView], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-06-05 21:29:19,226 INFO o.a.j.s.FileServer: Set new base='/Users/s.vrulin/Devel/otus-highload-arh-homework/tests/load2'
+2025-06-05 21:29:25,957 INFO o.a.j.e.StandardJMeterEngine: Running the test!
+2025-06-05 21:29:25,962 INFO o.a.j.s.SampleEvent: List of sample_variables: []
+2025-06-05 21:29:25,962 INFO o.a.j.s.SampleEvent: List of sample_variables: []
+2025-06-05 21:29:25,963 INFO o.a.j.e.u.CompoundVariable: Note: Function class names must contain the string: '.functions.'
+2025-06-05 21:29:25,963 INFO o.a.j.e.u.CompoundVariable: Note: Function class names must not contain the string: '.gui.'
+2025-06-05 21:29:25,996 INFO o.a.j.r.ClassFinder: Will scan jar /opt/homebrew/Cellar/jmeter/5.6.3/libexec/lib/ext/jmeter-plugins-manager-1.9.jar with filter ExtendsClassFilter [parents=[interface org.apache.jmeter.functions.Function], inner=false, contains=null, notContains=null]. Consider exposing JMeter plugins via META-INF/services, and add JMeter-Skip-Class-Scanning=true manifest attribute so JMeter can skip classfile scanning
+2025-06-05 21:29:26,002 INFO o.a.j.g.u.JMeterMenuBar: setRunning(true, *local*)
+2025-06-05 21:29:26,047 INFO o.a.j.e.StandardJMeterEngine: Starting ThreadGroup: 1 : Thread Group
+2025-06-05 21:29:26,048 INFO o.a.j.e.StandardJMeterEngine: Starting 1 threads for group Thread Group.
+2025-06-05 21:29:26,048 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2025-06-05 21:29:26,048 INFO o.a.j.t.ThreadGroup: Starting thread group... number=1 threads=1 ramp-up=1 delayedStart=false
+2025-06-05 21:29:26,050 INFO o.a.j.t.ThreadGroup: Started thread group number 1
+2025-06-05 21:29:26,050 INFO o.a.j.e.StandardJMeterEngine: All thread groups have been started
+2025-06-05 21:29:26,051 INFO o.a.j.t.JMeterThread: Thread started: Thread Group 1-1
+2025-06-05 21:29:26,056 INFO o.a.j.p.h.s.HTTPHCAbstractImpl: Local host = s-vrulin
+2025-06-05 21:29:26,059 INFO o.a.j.p.h.s.HTTPHC4Impl: HTTP request retry count = 0
+2025-06-05 21:29:59,002 INFO o.a.j.g.a.Start: Stopping test
+2025-06-05 21:29:59,022 INFO o.a.j.t.JMeterThread: Stopping: Thread Group 1-1
+2025-06-05 21:29:59,022 WARN o.a.j.t.JMeterThread: Interrupting: Thread Group 1-1 sampler: localhost:8080/api/v1/auth/register-1
+2025-06-05 21:29:59,026 INFO o.a.j.t.JMeterThread: Thread finished: Thread Group 1-1
+2025-06-05 21:29:59,027 INFO o.a.j.e.StandardJMeterEngine: Notifying test listeners of end of test
+2025-06-05 21:29:59,028 INFO o.a.j.g.u.JMeterMenuBar: setRunning(false, *local*)
+2025-06-05 21:30:12,096 INFO o.a.j.e.StandardJMeterEngine: Running the test!
+2025-06-05 21:30:12,097 INFO o.a.j.s.SampleEvent: List of sample_variables: []
+2025-06-05 21:30:12,099 INFO o.a.j.g.u.JMeterMenuBar: setRunning(true, *local*)
+2025-06-05 21:30:12,165 INFO o.a.j.e.StandardJMeterEngine: Starting ThreadGroup: 1 : Thread Group
+2025-06-05 21:30:12,165 INFO o.a.j.e.StandardJMeterEngine: Starting 1 threads for group Thread Group.
+2025-06-05 21:30:12,165 INFO o.a.j.e.StandardJMeterEngine: Thread will continue on error
+2025-06-05 21:30:12,165 INFO o.a.j.t.ThreadGroup: Starting thread group... number=1 threads=1 ramp-up=1 delayedStart=false
+2025-06-05 21:30:12,167 INFO o.a.j.t.ThreadGroup: Started thread group number 1
+2025-06-05 21:30:12,167 INFO o.a.j.e.StandardJMeterEngine: All thread groups have been started
+2025-06-05 21:30:12,167 INFO o.a.j.t.JMeterThread: Thread started: Thread Group 1-1
+2025-06-05 21:32:12,187 INFO o.a.j.t.JMeterThread: Stopping because end time detected by thread: Thread Group 1-1
+2025-06-05 21:32:12,196 INFO o.a.j.t.JMeterThread: Thread finished: Thread Group 1-1
+2025-06-05 21:32:12,202 INFO o.a.j.e.StandardJMeterEngine: Notifying test listeners of end of test
+2025-06-05 21:32:12,206 INFO o.a.j.g.u.JMeterMenuBar: setRunning(false, *local*)
