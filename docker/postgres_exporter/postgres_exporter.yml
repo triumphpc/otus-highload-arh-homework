@@ -1,0 +1,32 @@
+custom_queries:
+  pg_stat_database_reads:
+    query: |
+      SELECT xact_commit,
+             xact_rollback,
+             tup_fetched,
+             tup_returned
+      FROM pg_stat_database
+      WHERE datname = 'app_db'
+    metrics:
+      - xact_commit:
+          usage: "COUNTER"
+          description: "Number of committed transactions"
+      - xact_rollback:
+          usage: "COUNTER"
+          description: "Number of rolled back transactions"
+      - tup_fetched:
+          usage: "COUNTER"
+          description: "Number of rows fetched"
+      - tup_returned:
+          usage: "COUNTER"
+          description: "Number of rows returned"
+
+  pg_stat_activity:
+    query: |
+      SELECT count(*) as count_queries
+      FROM pg_stat_activity
+      WHERE datname = 'app_db'
+    metrics:
+      - count_queries:
+          usage: "GAUGE"
+          description: "Number of active queries"

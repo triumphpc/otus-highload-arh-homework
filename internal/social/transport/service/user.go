@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 
 	"otus-highload-arh-homework/internal/social/entity"
@@ -44,10 +43,10 @@ func (s *UserService) GetUserByID(ctx context.Context, subID int, requestID stri
 		return nil, fmt.Errorf("invalid user id %s", requestID)
 	}
 
-	if userID != subID {
-		log.Println("user not found in context", requestID, subID)
-		return nil, fmt.Errorf("incorrect user id %s", requestID)
-	}
+	//if userID != subID {
+	//	log.Println("user not found in context", requestID, subID)
+	//	return nil, fmt.Errorf("incorrect user id %s", requestID)
+	//}
 
 	// Получение пользователя
 	user, err := s.userUC.GetByID(ctx, userID)

@@ -1,6 +1,6 @@
 .PHONY: migrate-create migrate-up migrate-down
 
-DB_URL = postgres://user:pass@localhost:5432/db_name?sslmode=disable
+DB_URL = postgres://postgres:postgres@localhost:5432/db_name?sslmode=disable
 
 # Создать новую миграцию
 migrate-create:
