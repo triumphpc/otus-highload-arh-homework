@@ -5,12 +5,13 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	_ "otus-highload-arh-homework/docs"
 	"otus-highload-arh-homework/internal/social/entity"
 	"otus-highload-arh-homework/internal/social/transport"
 	"otus-highload-arh-homework/internal/social/transport/dto"
 	auth2 "otus-highload-arh-homework/internal/social/transport/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 type AuthHandler struct {

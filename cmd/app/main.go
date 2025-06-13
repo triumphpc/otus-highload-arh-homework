@@ -11,15 +11,17 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/pressly/goose/v3"
 	"otus-highload-arh-homework/internal/social/config"
 	"otus-highload-arh-homework/internal/social/repository/postgres"
 	"otus-highload-arh-homework/internal/social/transport/server"
 	authInternal "otus-highload-arh-homework/internal/social/transport/service"
 	authUC "otus-highload-arh-homework/internal/social/usecase/auth"
+	postUC "otus-highload-arh-homework/internal/social/usecase/post"
 	userUC "otus-highload-arh-homework/internal/social/usecase/user"
 	"otus-highload-arh-homework/pkg/auth"
 	"otus-highload-arh-homework/pkg/clients/pg"
+
+	"github.com/pressly/goose/v3"
 )
 
 // @title Social Network API
@@ -59,17 +61,21 @@ func main() {
 
 	// 3. Репозитории
 	userRepo := postgres.NewUserRepository(pgPool)
+	postRepo := postgres.NewPostRepository(pgPool)
 
 	// 4. Бизнес слои
 	authUseCase := authUC.NewAuth(userRepo, hasher)
-	userUserCase := userUC.New(userRepo)
+	userUseCase := userUC.New(userRepo)
+	friendUseCase := userUC.NewFriendUseCase(userRepo)
+	postUseCase := postUC.NewPostUseCase(postRepo)
 
 	// 5. Сервисы транспортного уровня
 	jwtService := authInternal.NewJWTGenerator(cfg.Auth.JwtSecretKey, cfg.Auth.JwtDuration)
 	authService := authInternal.NewAuthService(authUseCase, jwtService)
-	userService := authInternal.NewUserService(userUserCase, jwtService)
+	userService := authInternal.NewUserService(userUseCase, friendUseCase)
+	postService := authInternal.NewPostService(postUseCase)
 
-	srv := server.New(authService, userService, jwtService)
+	srv := server.New(authService, userService, postService, jwtService)
 
 	// Запуск сервера
 	go func() {

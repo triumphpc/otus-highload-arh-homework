@@ -5,19 +5,21 @@ import (
 	"errors"
 	ht "net/http"
 
+	"otus-highload-arh-homework/internal/social/handler/http"
+	"otus-highload-arh-homework/internal/social/transport/service"
+	"otus-highload-arh-homework/pkg/clients/prometheus"
+
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"otus-highload-arh-homework/internal/social/handler/http"
-	"otus-highload-arh-homework/internal/social/transport/service"
-	"otus-highload-arh-homework/pkg/clients/prometheus"
 )
 
 type Server struct {
 	router      *gin.Engine
 	authHandler *http.AuthHandler
 	userHandler *http.UserHandler
+	postHandler *http.PostHandler
 	jwtService  *service.JWTGenerator
 	httpServer  *ht.Server
 }
@@ -25,6 +27,7 @@ type Server struct {
 func New(
 	authService *service.AuthService,
 	userService *service.UserService,
+	postService *service.PostService,
 	jwtService *service.JWTGenerator,
 ) *Server {
 	router := gin.Default()
@@ -36,6 +39,7 @@ func New(
 	// Инициализация handler'ов
 	authHandler := http.NewAuthHandler(authService)
 	userHandler := http.NewUserHandler(userService)
+	postHandler := http.NewPostHandler(postService)
 
 	// Swagger docs route
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -59,6 +63,25 @@ func New(
 			userGroup.GET("/get/:id", userHandler.GetUser)
 			userGroup.GET("/search", userHandler.SearchUsers)
 		}
+	}
+
+	// Друзья
+	friendGroup := api.Group("/friend")
+	friendGroup.Use(http.AuthMiddleware(jwtService))
+	{
+		friendGroup.PUT("/set/:user_id", userHandler.SetFriend)
+		friendGroup.PUT("/delete/:user_id", userHandler.DeleteFriend)
+	}
+
+	// Посты
+	postGroup := api.Group("/post")
+	postGroup.Use(http.AuthMiddleware(jwtService))
+	{
+		postGroup.POST("/create", http.AuthMiddleware(jwtService), postHandler.CreatePost)
+		postGroup.PUT("/update", http.AuthMiddleware(jwtService), postHandler.UpdatePost)
+		postGroup.PUT("/delete/:id", http.AuthMiddleware(jwtService), postHandler.DeletePost)
+		postGroup.GET("/get/:id", postHandler.GetPost)
+		postGroup.GET("/feed", http.AuthMiddleware(jwtService), postHandler.GetFeed)
 	}
 
 	return &Server{
