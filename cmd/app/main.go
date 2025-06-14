@@ -93,6 +93,7 @@ func main() {
 
 	// 7. Запуск воркеров для обработки задач прогрева кэша
 	go func() {
+		log.Println("Starting StartCacheWorkers...", cfg.Cache.NumWorkers)
 		cachewarmer.StartCacheWorkers(ctx, redisClient, cfg.Cache.NumWorkers, postService)
 	}()
 

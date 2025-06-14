@@ -30,8 +30,7 @@ func StartCacheWorkers(ctx context.Context, client *redis.Client, numWorkers int
 					Block:    5 * time.Second,
 				}).Result()
 
-				if err != nil && !errors.Is(err, redis.Nil) {
-					log.Printf("Worker %d error: %v", workerID, err)
+				if err != nil && !errors.Is(err, redis.Nil) || len(result) == 0 {
 					time.Sleep(1 * time.Second)
 					continue
 				}

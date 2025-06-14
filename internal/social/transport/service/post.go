@@ -273,7 +273,7 @@ func (s *PostService) PreloadUserFriendsFeeds(ctx context.Context, userID int) e
 		}
 
 		// Сохраняем в кэш
-		if err := s.cacheFeed(userID, response); err != nil {
+		if err := s.cacheFeed(friendID, response); err != nil {
 			return fmt.Errorf("failed to cache feed: %w", err)
 		}
 

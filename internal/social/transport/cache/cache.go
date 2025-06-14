@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -36,6 +37,8 @@ func (w *CacheWarmer) WarmForNewPost(ctx context.Context, authorID int) error {
 	if err := w.queue.Push(ctx, task); err != nil {
 		return fmt.Errorf("failed to push new post: %w", err)
 	}
+
+	log.Printf("Pushed task for author %d\n", authorID)
 
 	return nil
 }
