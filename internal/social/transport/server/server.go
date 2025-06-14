@@ -47,6 +47,7 @@ func New(
 	// Регистрируем метрики
 	router.Use(prometheus.MetricsMiddleware())
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	router.GET("/health", healthCheck)
 
 	// Роуты
 	api := router.Group("/api/v1")
@@ -77,11 +78,11 @@ func New(
 	postGroup := api.Group("/post")
 	postGroup.Use(http.AuthMiddleware(jwtService))
 	{
-		postGroup.POST("/create", http.AuthMiddleware(jwtService), postHandler.CreatePost)
-		postGroup.PUT("/update", http.AuthMiddleware(jwtService), postHandler.UpdatePost)
-		postGroup.PUT("/delete/:id", http.AuthMiddleware(jwtService), postHandler.DeletePost)
+		postGroup.POST("/create", postHandler.CreatePost)
+		postGroup.PUT("/update", postHandler.UpdatePost)
+		postGroup.PUT("/delete/:id", postHandler.DeletePost)
 		postGroup.GET("/get/:id", postHandler.GetPost)
-		postGroup.GET("/feed", http.AuthMiddleware(jwtService), postHandler.GetFeed)
+		postGroup.GET("/feed", postHandler.GetFeed)
 	}
 
 	return &Server{
@@ -112,4 +113,10 @@ func (s *Server) Shutdown(ctx context.Context) error {
 		return nil
 	}
 	return s.httpServer.Shutdown(ctx)
+}
+
+func healthCheck(c *gin.Context) {
+	c.JSON(ht.StatusOK, gin.H{
+		"status": "OK",
+	})
 }

@@ -204,25 +204,39 @@ services:
         condition: service_healthy
     volumes:
       - pgpool_data:/bitnami/pgpool
-#    healthcheck:
-#      test: [ "CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1 -p 5432 || exit 1" ]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 5
+    healthcheck:
+      test: |
+        bash -c "
+        export PGPASSWORD=$$PGPOOL_SR_CHECK_PASSWORD
+        psql -U postgres -h localhost -p 5432 -c 'SELECT 1 AS connection_test;' | grep -q '1' || exit 1
+        "
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   db-seeder:
     profiles:
       - seed
-    build:
-      context: .
-      dockerfile: pg/Dockerfile.seeder
+    container_name: db-seeder
+    image: postgres:14
     depends_on:
-      - pgpool
+      pgpool:
+        condition: service_healthy
     env_file:
       - .env
     networks:
       - app-network
+    volumes:
+      - ./pg/seed.sql:/docker-entrypoint-initdb.d/seed.sql
     restart: on-failure
+    command: >
+      bash -c "
+      while ! PGPASSWORD=$$POSTGRES_PASSWORD pg_isready -h pgpool -p 5432 -U $$POSTGRES_USER; do
+      echo 'Waiting for pgpool...';
+      sleep 5;
+      done;
+      PGPASSWORD=$$POSTGRES_PASSWORD psql -h pgpool -U $$POSTGRES_USER -d $$POSTGRES_DB -f /docker-entrypoint-initdb.d/seed.sql
+      "
 
   # Экспортер метрик PostgreSQL для Prometheus
   postgres-exporter-1:
@@ -272,7 +286,7 @@ services:
     networks:
       - app-network
 
-#   Prometheus для сбора метрик
+  #   Prometheus для сбора метрик
   prometheus:
     container_name: prometheus
     image: prom/prometheus
@@ -315,6 +329,30 @@ services:
       timeout: 5s
       retries: 3
 
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - app-network
+    environment:
+      - REDIS_PASSWORD=secret
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "secret", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    command:
+      - redis-server
+      - --requirepass secret
+      - --save 60 1
+      - --loglevel warning
+      - --databases 2
+
 volumes:
   grafana_data:
   etcd_data:
@@ -322,6 +360,7 @@ volumes:
   postgres_data2:
   postgres_data3:
   pgpool_data:
+  redis_data:
 
 networks:
   app-network:

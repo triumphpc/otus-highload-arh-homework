@@ -19,4 +19,5 @@ var (
 	ErrInvalidPostID           = errors.New("invalid post ID")
 	ErrInvalidPaginationParams = errors.New("invalid pagination parameters")
 	ErrValidation              = errors.New("validation failed")
+	ErrCacheMiss               = errors.New("cache miss")
 )

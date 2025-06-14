@@ -14,6 +14,7 @@ type UserRepository interface {
 	AddFriend(ctx context.Context, userID, friendID int) error
 	RemoveFriend(ctx context.Context, userID, friendID int) error
 	CheckFriendship(ctx context.Context, userID, friendID int) (bool, error)
+	GetFriendsIDs(ctx context.Context, userID int) ([]int, error)
 }
 
 // PostRepository определяет контракт для работы с хранилищем постов

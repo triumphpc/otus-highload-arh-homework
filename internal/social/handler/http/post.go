@@ -70,7 +70,7 @@ func (h *PostHandler) CreatePost(c *gin.Context) {
 // @Produce json
 // @Param input body dto.UpdatePostRequest true "Данные для обновления поста"
 // @Security ApiKeyAuth
-// @Success 200 {object} dto.SuccessResponse
+// @Success 200 {object} dto.PostResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse
@@ -116,7 +116,7 @@ func (h *PostHandler) UpdatePost(c *gin.Context) {
 // @Produce json
 // @Param id path string true "ID поста"
 // @Security ApiKeyAuth
-// @Success 200 {object} dto.SuccessResponse
+// @Success 200 {object} dto.PostResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 401 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse

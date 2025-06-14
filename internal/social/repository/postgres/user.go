@@ -293,3 +293,31 @@ func (r *UserRepository) CheckFriendship(ctx context.Context, userID, friendID i
 
 	return exists, nil
 }
+
+// GetFriendsIDs возвращает список друзей пользователя
+func (r *UserRepository) GetFriendsIDs(ctx context.Context, userID int) ([]int, error) {
+	const query = `
+        SELECT friend_id FROM friends WHERE user_id = $1
+    `
+
+	rows, err := r.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query friends IDs: %w", err)
+	}
+	defer rows.Close()
+
+	var friendsIDs []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("failed to scan friend ID: %w", err)
+		}
+		friendsIDs = append(friendsIDs, id)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	return friendsIDs, nil
+}

@@ -91,7 +91,7 @@ func (h *UserHandler) SearchUsers(c *gin.Context) {
 // @Produce json
 // @Param user_id path string true "ID пользователя, которого добавляем в друзья"
 // @Security ApiKeyAuth
-// @Success 200 {object} dto.SuccessResponse
+// @Success 200 {object} dto.UserResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse
@@ -133,7 +133,7 @@ func (h *UserHandler) SetFriend(c *gin.Context) {
 // @Produce json
 // @Param user_id path string true "ID пользователя, которого удаляем из друзей"
 // @Security ApiKeyAuth
-// @Success 200 {object} dto.SuccessResponse
+// @Success 200 {object} dto.UserResponse
 // @Failure 400 {object} dto.ErrorResponse
 // @Failure 403 {object} dto.ErrorResponse
 // @Failure 404 {object} dto.ErrorResponse

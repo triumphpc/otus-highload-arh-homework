@@ -80,3 +80,22 @@ func (uc *FriendUseCase) RemoveFriend(ctx context.Context, userID, friendID int)
 func (uc *FriendUseCase) CheckFriendship(ctx context.Context, userID, friendID int) (bool, error) {
 	return uc.userRepo.CheckFriendship(ctx, userID, friendID)
 }
+
+// GetFriendsIDs возвращает только ID друзей пользователя
+func (uc *FriendUseCase) GetFriendsIDs(ctx context.Context, userID int) ([]int, error) {
+	// Проверяем существование пользователя
+	if _, err := uc.userRepo.GetByID(ctx, userID); err != nil {
+		if errors.Is(err, repository.ErrUserNotFound) {
+			return nil, ErrUserNotFound
+		}
+		return nil, fmt.Errorf("failed to check user existence: %w", err)
+	}
+
+	// Получаем список ID друзей
+	friendsIDs, err := uc.userRepo.GetFriendsIDs(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get friends IDs: %w", err)
+	}
+
+	return friendsIDs, nil
+}

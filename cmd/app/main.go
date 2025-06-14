@@ -13,6 +13,7 @@ import (
 
 	"otus-highload-arh-homework/internal/social/config"
 	"otus-highload-arh-homework/internal/social/repository/postgres"
+	cachewarmer "otus-highload-arh-homework/internal/social/transport/cache"
 	"otus-highload-arh-homework/internal/social/transport/server"
 	authInternal "otus-highload-arh-homework/internal/social/transport/service"
 	authUC "otus-highload-arh-homework/internal/social/usecase/auth"
@@ -20,6 +21,7 @@ import (
 	userUC "otus-highload-arh-homework/internal/social/usecase/user"
 	"otus-highload-arh-homework/pkg/auth"
 	"otus-highload-arh-homework/pkg/clients/pg"
+	"otus-highload-arh-homework/pkg/clients/redis"
 
 	"github.com/pressly/goose/v3"
 )
@@ -43,8 +45,10 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
+	cfg := config.Load()
+
 	// 1. Инициализация ресурсов
-	pgPool, err := pg.New(ctx, pg.Load())
+	pgPool, err := pg.New(ctx, &cfg.PG)
 	if err != nil {
 		log.Fatalf("Failed to init PG: %v", err)
 	}
@@ -54,7 +58,15 @@ func main() {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
-	cfg := config.Load()
+	redisClient, err := redis.New(ctx, &cfg.Redis)
+	if err != nil {
+		log.Fatalf("Failed to initialize Redis: %v", err)
+	}
+	defer func() {
+		if err := redis.Close(redisClient); err != nil {
+			log.Printf("Failed to close Redis connection: %v", err)
+		}
+	}()
 
 	// 2. Вспомогательные сервисы
 	hasher := auth.NewBcryptHasher(cfg.Auth.HashCost)
@@ -69,11 +81,20 @@ func main() {
 	friendUseCase := userUC.NewFriendUseCase(userRepo)
 	postUseCase := postUC.NewPostUseCase(postRepo)
 
-	// 5. Сервисы транспортного уровня
+	// 5. Инициализация очереди и CacheWarmer
+	redisQueue := cachewarmer.NewRedisQueue(redisClient)
+	cacheWarmer := cachewarmer.New(redisQueue, redisClient)
+
+	// 6. Сервисы транспортного уровня
 	jwtService := authInternal.NewJWTGenerator(cfg.Auth.JwtSecretKey, cfg.Auth.JwtDuration)
 	authService := authInternal.NewAuthService(authUseCase, jwtService)
 	userService := authInternal.NewUserService(userUseCase, friendUseCase)
-	postService := authInternal.NewPostService(postUseCase)
+	postService := authInternal.NewPostService(postUseCase, friendUseCase, cacheWarmer)
+
+	// 7. Запуск воркеров для обработки задач прогрева кэша
+	go func() {
+		cachewarmer.StartCacheWorkers(ctx, redisClient, cfg.Cache.NumWorkers, postService)
+	}()
 
 	srv := server.New(authService, userService, postService, jwtService)
 
