@@ -1,0 +1,583 @@
+basePath: /api/v1
+definitions:
+  dto.CreatePostRequest:
+    properties:
+      text:
+        type: string
+    required:
+    - text
+    type: object
+  dto.ErrorResponse:
+    properties:
+      details:
+        type: string
+      error:
+        type: string
+    type: object
+  dto.LoginInput:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    required:
+    - email
+    - password
+    type: object
+  dto.PostIdResponse:
+    properties:
+      id:
+        type: string
+    type: object
+  dto.PostResponse:
+    properties:
+      author_id:
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: string
+      text:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  dto.RegisterInput:
+    properties:
+      birth_date:
+        example: "1983-01-02T15:04:05Z"
+        format: date-time
+        type: string
+      city:
+        maxLength: 100
+        type: string
+      email:
+        type: string
+      first_name:
+        maxLength: 50
+        minLength: 2
+        type: string
+      gender:
+        allOf:
+        - $ref: '#/definitions/entity.Gender'
+        enum:
+        - male
+        - female
+        - other
+      interests:
+        items:
+          type: string
+        maxItems: 10
+        type: array
+      last_name:
+        maxLength: 50
+        minLength: 2
+        type: string
+      password:
+        maxLength: 72
+        minLength: 8
+        type: string
+    required:
+    - birth_date
+    - city
+    - email
+    - first_name
+    - gender
+    - last_name
+    - password
+    type: object
+  dto.RegisterSuccessResponse:
+    properties:
+      token:
+        type: string
+      user:
+        $ref: '#/definitions/dto.UserResponse'
+    type: object
+  dto.UpdatePostRequest:
+    properties:
+      id:
+        type: string
+      text:
+        type: string
+    required:
+    - id
+    - text
+    type: object
+  dto.UserResponse:
+    properties:
+      birth_date:
+        type: string
+      city:
+        type: string
+      created_at:
+        type: string
+      email:
+        type: string
+      first_name:
+        type: string
+      gender:
+        $ref: '#/definitions/entity.Gender'
+      id:
+        type: integer
+      interests:
+        items:
+          type: string
+        type: array
+      is_adult:
+        type: boolean
+      last_name:
+        type: string
+    type: object
+  dto.ValidationErrorResponse:
+    properties:
+      details:
+        type: string
+      error:
+        type: string
+    type: object
+  entity.Gender:
+    enum:
+    - male
+    - female
+    - other
+    type: string
+    x-enum-varnames:
+    - GenderMale
+    - GenderFemale
+    - GenderOther
+host: localhost:8080
+info:
+  contact:
+    email: trumph.job@gmail.com
+    name: API Support
+  description: API для социальной сети
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  title: Social Network API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Возвращает JWT токен для аутентификации
+      parameters:
+      - description: Данные для входа
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.LoginInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный вход
+          schema:
+            $ref: '#/definitions/dto.RegisterSuccessResponse'
+        "400":
+          description: Неверные входные данные
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Неверный email или пароль
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Аутентификация пользователя
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Создает нового пользователя и возвращает JWT токен
+      parameters:
+      - description: Данные для регистрации
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RegisterInput'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Успешная регистрация
+          schema:
+            $ref: '#/definitions/dto.RegisterSuccessResponse'
+        "400":
+          description: Неверные входные данные
+          schema:
+            $ref: '#/definitions/dto.ValidationErrorResponse'
+        "409":
+          description: Пользователь уже существует
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Регистрация нового пользователя
+      tags:
+      - auth
+  /friend/delete/{user_id}:
+    put:
+      consumes:
+      - application/json
+      description: Удалить пользователя из друзей
+      parameters:
+      - description: ID пользователя, которого удаляем из друзей
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Удалить из друзей
+      tags:
+      - friend
+  /friend/set/{user_id}:
+    put:
+      consumes:
+      - application/json
+      description: Добавить пользователя в друзья
+      parameters:
+      - description: ID пользователя, которого добавляем в друзья
+        in: path
+        name: user_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Добавить в друзья
+      tags:
+      - friend
+  /post/create:
+    post:
+      consumes:
+      - application/json
+      description: Создает новый пост пользователя
+      parameters:
+      - description: Данные для создания поста
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreatePostRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PostIdResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Создать пост
+      tags:
+      - post
+  /post/delete/{id}:
+    put:
+      consumes:
+      - application/json
+      description: Удаляет пост по его идентификатору
+      parameters:
+      - description: ID поста
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PostResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Удалить пост
+      tags:
+      - post
+  /post/feed:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает ленту постов друзей пользователя
+      parameters:
+      - default: 0
+        description: Оффсет
+        in: query
+        name: offset
+        type: integer
+      - default: 10
+        description: Лимит
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.PostResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Лента постов друзей
+      tags:
+      - post
+  /post/get/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает пост по его идентификатору
+      parameters:
+      - description: ID поста
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PostResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      summary: Получить пост
+      tags:
+      - post
+  /post/update:
+    put:
+      consumes:
+      - application/json
+      description: Обновляет текст существующего поста
+      parameters:
+      - description: Данные для обновления поста
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdatePostRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.PostResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Обновить пост
+      tags:
+      - post
+  /user/get/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Получить информацию по пользователю
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.UserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Пользователь по ID
+      tags:
+      - user
+  /user/search:
+    get:
+      consumes:
+      - application/json
+      description: Поиск анкет пользователей по имени и фамилии
+      parameters:
+      - description: Часть имени для поиска
+        in: query
+        name: first_name
+        required: true
+        type: string
+      - description: Часть фамилии для поиска
+        in: query
+        name: last_name
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.UserResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Поиск пользователей
+      tags:
+      - user
+schemes:
+- http
+swagger: "2.0"
