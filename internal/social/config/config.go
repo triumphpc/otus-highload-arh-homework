@@ -4,14 +4,21 @@ import (
 	"log"
 	"time"
 
+	cachewarmer "otus-highload-arh-homework/internal/social/transport/cache"
+	"otus-highload-arh-homework/pkg/clients/pg"
+	"otus-highload-arh-homework/pkg/clients/redis"
+
 	"github.com/caarlos0/env/v9"
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	HTTP HTTP
-	App  App
-	Auth Auth
+	HTTP  HTTP
+	App   App
+	Auth  Auth
+	Redis redis.Config
+	PG    pg.Config
+	Cache cachewarmer.Config
 }
 
 type HTTP struct {
@@ -31,7 +38,7 @@ type App struct {
 type Auth struct {
 	HashCost     int           `env:"AUTH_HASH_COST" env-default:"10"`
 	JwtSecretKey string        `env:"AUTH_JWT_SECRET_KEY" env-default:"your-secret-key"`
-	JwtDuration  time.Duration `env:"AUTH_JWT_DURATION" env-default:"30m"`
+	JwtDuration  time.Duration `env:"AUTH_JWT_DURATION" env-default:"60m"`
 }
 
 func Load() *Config {

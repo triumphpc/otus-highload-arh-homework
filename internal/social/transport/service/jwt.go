@@ -3,8 +3,9 @@ package service
 import (
 	"time"
 
-	"github.com/golang-jwt/jwt/v5"
 	"otus-highload-arh-homework/internal/social/transport"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type JWTGenerator struct {

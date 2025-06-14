@@ -52,3 +52,24 @@ type ErrorResponse struct {
 	Error   string `json:"error"`
 	Details string `json:"details"`
 }
+
+type CreatePostRequest struct {
+	Text string `json:"text" binding:"required"`
+}
+
+type UpdatePostRequest struct {
+	PostID string `json:"id" binding:"required"`
+	Text   string `json:"text" binding:"required"`
+}
+
+type PostIdResponse struct {
+	PostID string `json:"id"`
+}
+
+type PostResponse struct {
+	ID        string    `json:"id"`
+	AuthorID  int       `json:"author_id"`
+	Text      string    `json:"text"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
