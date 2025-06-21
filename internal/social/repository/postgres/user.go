@@ -6,14 +6,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"otus-highload-arh-homework/internal/social/entity"
 	"otus-highload-arh-homework/internal/social/repository"
 	"otus-highload-arh-homework/internal/social/repository/dao"
 
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lib/pq"
-
-	"otus-highload-arh-homework/internal/social/entity"
 )
 
 type UserRepository struct {
@@ -229,4 +228,96 @@ func (r *UserRepository) Search(ctx context.Context, firstName, lastName string)
 	}
 
 	return users, nil
+}
+
+// AddFriend добавляет друга для пользователя
+func (r *UserRepository) AddFriend(ctx context.Context, userID, friendID int) error {
+	const query = `
+		INSERT INTO friends (user_id, friend_id)
+		VALUES ($1, $2), ($2, $1)
+		ON CONFLICT (user_id, friend_id) DO NOTHING
+	`
+
+	_, err := r.pool.Exec(ctx, query, userID, friendID)
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			switch pgErr.Code {
+			case "23503": // foreign_key_violation
+				return fmt.Errorf("one of the users doesn't exist: %w", err)
+			case "23505": // unique_violation
+				return nil // дружба уже существует, это не ошибка
+			}
+		}
+		return fmt.Errorf("failed to add friend: %w", err)
+	}
+
+	return nil
+}
+
+// RemoveFriend удаляет друга у пользователя (взаимное удаление)
+func (r *UserRepository) RemoveFriend(ctx context.Context, userID, friendID int) error {
+	const query = `
+		DELETE FROM friends
+		WHERE (user_id = $1 AND friend_id = $2)
+		OR (user_id = $2 AND friend_id = $1)
+	`
+
+	result, err := r.pool.Exec(ctx, query, userID, friendID)
+	if err != nil {
+		return fmt.Errorf("failed to remove friend: %w", err)
+	}
+
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("friendship not found: %w", sql.ErrNoRows)
+	}
+
+	return nil
+}
+
+// CheckFriendship проверяет существование дружбы между пользователями
+func (r *UserRepository) CheckFriendship(ctx context.Context, userID, friendID int) (bool, error) {
+	const query = `
+		SELECT EXISTS(
+			SELECT 1 FROM friends
+			WHERE (user_id = $1 AND friend_id = $2)
+			OR (user_id = $2 AND friend_id = $1)
+		)
+	`
+
+	var exists bool
+	err := r.pool.QueryRow(ctx, query, userID, friendID).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check friendship: %w", err)
+	}
+
+	return exists, nil
+}
+
+// GetFriendsIDs возвращает список друзей пользователя
+func (r *UserRepository) GetFriendsIDs(ctx context.Context, userID int) ([]int, error) {
+	const query = `
+        SELECT friend_id FROM friends WHERE user_id = $1
+    `
+
+	rows, err := r.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query friends IDs: %w", err)
+	}
+	defer rows.Close()
+
+	var friendsIDs []int
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("failed to scan friend ID: %w", err)
+		}
+		friendsIDs = append(friendsIDs, id)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	return friendsIDs, nil
 }
