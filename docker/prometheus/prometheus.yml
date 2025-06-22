@@ -7,13 +7,59 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
-  - job_name: 'postgresql'
+  - job_name: 'postgres-shard1'
     static_configs:
-      - targets:
-          - 'postgres-exporter-1:9187'
-          - 'postgres-exporter-2:9187'
-          - 'postgres-exporter-3:9187'
-    metrics_path: /metrics
+      - targets: [ 'postgres-exporter-shard1-node1:9187' ]
+        labels:
+          shard: '1'
+          node: '1'
+          role: 'primary'
+      - targets: [ 'postgres-exporter-shard1-node2:9187' ]
+        labels:
+          shard: '1'
+          node: '2'
+          role: 'replica'
+      - targets: [ 'postgres-exporter-shard1-node3:9187' ]
+        labels:
+          shard: '1'
+          node: '3'
+          role: 'replica'
+
+  - job_name: 'postgres-shard2'
+    static_configs:
+      - targets: [ 'postgres-exporter-shard2-node1:9187' ]
+        labels:
+          shard: '2'
+          node: '1'
+          role: 'primary'
+      - targets: [ 'postgres-exporter-shard2-node2:9187' ]
+        labels:
+          shard: '2'
+          node: '2'
+          role: 'replica'
+      - targets: [ 'postgres-exporter-shard2-node3:9187' ]
+        labels:
+          shard: '2'
+          node: '3'
+          role: 'replica'
+
+  - job_name: 'postgres-shard3'
+    static_configs:
+      - targets: [ 'postgres-exporter-shard3-node1:9187' ]
+        labels:
+          shard: '3'
+          node: '1'
+          role: 'primary'
+      - targets: [ 'postgres-exporter-shard3-node2:9187' ]
+        labels:
+          shard: '3'
+          node: '2'
+          role: 'replica'
+      - targets: [ 'postgres-exporter-shard3-node3:9187' ]
+        labels:
+          shard: '3'
+          node: '3'
+          role: 'replica'
 
   - job_name: 'node'
     static_configs:
