@@ -1,0 +1,14 @@
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /app
+COPY go.mod .
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o /pg-test-app ./cmd/pg_test_app/main.go
+
+FROM alpine:latest
+
+RUN apk add --no-cache postgresql-client bash
+COPY --from=builder /pg-test-app /pg-test-app
+
+CMD ["/pg-test-app"]

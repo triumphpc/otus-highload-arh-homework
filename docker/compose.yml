@@ -1,180 +1,89 @@
 services:
-#  app:
-#    container_name: app
-#    build:
-#      context: ..
-#      dockerfile: docker/app/Dockerfile.patroni
-#    ports:
-#      - "8080:8080"
-#    depends_on:
-#      - pgpool
-#    env_file:
-#      - .env
-#    networks:
-#      - app-network
-#    expose:
-#      - "8080"
-#    healthcheck:
-#      test: [ "CMD", "wget", "-q", "-O", "-", "http://localhost:8080/health" ]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 3
+  #  app:
+  #    container_name: app
+  #    build:
+  #      context: ..
+  #      dockerfile: docker/app/Dockerfile
+  #    ports:
+  #      - "8080:8080"
+  #    depends_on:
+  #      - haproxy
+  #    env_file:
+  #      - .env
+  #    networks:
+  #      - app-network
+  #    volumes:
+  #      - ./pg/ssl-cert-snakeoil.pem:/etc/ssl/certs/ssl-cert-snakeoil.pem:ro
+  #      - ./pg/ssl-cert-snakeoil.key:/etc/ssl/private/ssl-cert-snakeoil.key:ro
+  #    expose:
+  #      - "8080"
+  #    healthcheck:
+  #      test: [ "CMD", "wget", "-q", "-O", "-", "http://localhost:8080/health" ]
+  #      interval: 10s
+  #      timeout: 5s
+  #      retries: 3
+  #    command: tail -f /dev/null
+  #    environment: &haproxy_env
+  #      PGSSLMODE: verify-ca
+  #      PGSSLKEY: /etc/ssl/private/ssl-cert-snakeoil.key
+  #      PGSSLCERT: /etc/ssl/certs/ssl-cert-snakeoil.pem
+  #      PGSSLROOTCERT: /etc/ssl/certs/ssl-cert-snakeoil.pem
 
-  etcd1: &etcd
-    image: triumphjob/patroni-citus:1.0
+  pg_test:
+    build:
+      context: ..
+      dockerfile: docker/app/Dockerfile.pg
     networks:
       - app-network
-    environment:
-      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
-      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
-      ETCD_INITIAL_CLUSTER: etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380
-      ETCD_INITIAL_CLUSTER_STATE: new
-      ETCD_INITIAL_CLUSTER_TOKEN: tutorial
-      ETCD_UNSUPPORTED_ARCH: arm64
-    container_name: demo-etcd1
-    hostname: etcd1
-    command: etcd --name etcd1 --initial-advertise-peer-urls http://etcd1:2380
+    env_file:
+      - .env
+#    command: tail -f /dev/null
 
-  etcd2:
-    <<: *etcd
-    container_name: demo-etcd2
-    hostname: etcd2
-    command: etcd --name etcd2 --initial-advertise-peer-urls http://etcd2:2380
-
-  etcd3:
-    <<: *etcd
-    container_name: demo-etcd3
-    hostname: etcd3
-    command: etcd --name etcd3 --initial-advertise-peer-urls http://etcd3:2380
-
-  haproxy:
-    image: triumphjob/patroni-citus:1.0
+  master:
+    container_name: master
+    image: "citusdata/citus:13.0.3"
     networks:
       - app-network
-    env_file: pg/patroni.env
-    hostname: haproxy
-    container_name: demo-haproxy
     ports:
-      - "5000:5000"  # Access to the coorinator primary
-      - "5001:5001"  # Load-balancing across workers primaries
-    command: haproxy
-    environment: &haproxy_env
-      ETCDCTL_ENDPOINTS: http://etcd1:2379,http://etcd2:2379,http://etcd3:2379
-      PATRONI_ETCD3_HOSTS: "'etcd1:2379','etcd2:2379','etcd3:2379'"
-      PATRONI_SCOPE: demo
-      PATRONI_CITUS_GROUP: 0
-      PATRONI_CITUS_DATABASE: app_db
-      PGSSLMODE: verify-ca
-      PGSSLKEY: /etc/ssl/private/ssl-cert-snakeoil.key
-      PGSSLCERT: /etc/ssl/certs/ssl-cert-snakeoil.pem
-      PGSSLROOTCERT: /etc/ssl/certs/ssl-cert-snakeoil.pem
+      - "5432:5432"
+    environment: &AUTH
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "postgres"
+      POSTGRES_DB: "app_db"
+      PGUSER: "postgres"
+      PGPASSWORD: "postgres"
+      POSTGRES_HOST_AUTH_METHOD: "trust"
 
-  coord1:
-    image: triumphjob/patroni-citus:1.0
+  worker1:
+    image: "citusdata/citus:13.0.3"
+    depends_on: [ manager ]
     networks:
       - app-network
-    env_file: pg/patroni.env
-    hostname: coord1
-    container_name: demo-coord1
-    environment: &coord_env
-      <<: *haproxy_env
-      PATRONI_NAME: coord1
-      PATRONI_CITUS_GROUP: 0
+    environment: *AUTH
+    command: "/wait-for-manager.sh"
+    volumes:
+      - healthcheck-volume:/healthcheck
 
-  coord2:
-    image: triumphjob/patroni-citus:1.0
+  worker2:
+    image: "citusdata/citus:13.0.3"
+    depends_on: [ manager ]
     networks:
       - app-network
-    env_file: pg/patroni.env
-    hostname: coord2
-    container_name: demo-coord2
-    environment:
-      <<: *coord_env
-      PATRONI_NAME: coord2
+    environment: *AUTH
+    command: "/wait-for-manager.sh"
+    volumes:
+      - healthcheck-volume:/healthcheck
 
-  coord3:
-    image: triumphjob/patroni-citus:1.0
+  manager:
+    container_name: manager
+    image: "citusdata/membership-manager:0.3.0"
+    volumes:
+      - "${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock"
+      - healthcheck-volume:/healthcheck
+    depends_on: [ master ]
     networks:
       - app-network
-    env_file: pg/patroni.env
-    hostname: coord3
-    container_name: demo-coord3
-    environment:
-      <<: *coord_env
-      PATRONI_NAME: coord3
-
-  work1-1:
-    image: triumphjob/patroni-citus:1.0
-    networks:
-      - app-network
-    env_file: pg/patroni.env
-    hostname: work1-1
-    container_name: demo-work1-1
-    environment: &work1_env
-      <<: *haproxy_env
-      PATRONI_NAME: work1-1
-      PATRONI_CITUS_GROUP: 1
-
-  work1-2:
-    image: triumphjob/patroni-citus:1.0
-    networks:
-      - app-network
-    env_file: pg/patroni.env
-    hostname: work1-2
-    container_name: demo-work1-2
-    environment:
-      <<: *work1_env
-      PATRONI_NAME: work1-2
-
-
-  work2-1:
-    image: triumphjob/patroni-citus:1.0
-    networks:
-      - app-network
-    env_file: pg/patroni.env
-    hostname: work2-1
-    container_name: demo-work2-1
-    environment: &work2_env
-      <<: *haproxy_env
-      PATRONI_NAME: work2-1
-      PATRONI_CITUS_GROUP: 2
-
-  work2-2:
-    image: triumphjob/patroni-citus:1.0
-    networks:
-      - app-network
-    env_file: pg/patroni.env
-    hostname: work2-2
-    container_name: demo-work2-2
-    environment:
-      <<: *work2_env
-      PATRONI_NAME: work2-2
-
-
-  work3-1:
-    image: triumphjob/patroni-citus:1.0
-    networks:
-      - app-network
-    env_file: pg/patroni.env
-    hostname: work3-1
-    container_name: demo-work3-1
-    environment: &work3_env
-      <<: *haproxy_env
-      PATRONI_NAME: work3-1
-      PATRONI_CITUS_GROUP: 3
-
-  work3-2:
-    image: triumphjob/patroni-citus:1.0
-    networks:
-      - app-network
-    env_file: pg/patroni.env
-    hostname: work3-2
-    container_name: demo-work3-2
-    environment:
-      <<: *work3_env
-      PATRONI_NAME: work3-2
-
-
+    environment: *AUTH
 
 #  db-seeder:
 #    profiles:
@@ -183,117 +92,73 @@ services:
 #      context: .
 #      dockerfile: pg/Dockerfile.seeder
 #    depends_on:
-#      - pgpool
+#      - haproxy
 #    env_file:
 #      - .env
 #    networks:
 #      - app-network
 #    restart: on-failure
 
-
-  # Экспортер метрик PostgreSQL для Prometheus
-#  postgres-exporter-1:
-#    image: prometheuscommunity/postgres-exporter
-#    container_name: postgres-exporter-1
-#    environment:
-#      - DATA_SOURCE_NAME=postgresql://postgres:postgres@patroni1:5432/app_db?sslmode=disable
-#    ports:
-#      - "9187:9187"
-#    networks:
-#      - app-network
-#
-#  postgres-exporter-2:
-#    image: prometheuscommunity/postgres-exporter
-#    container_name: postgres-exporter-2
-#    environment:
-#      - DATA_SOURCE_NAME=postgresql://postgres:postgres@patroni2:5432/app_db?sslmode=disable
-#    ports:
-#      - "9188:9187"
-#    networks:
-#      - app-network
-#
-#  postgres-exporter-3:
-#    image: prometheuscommunity/postgres-exporter
-#    container_name: postgres-exporter-3
-#    environment:
-#      - DATA_SOURCE_NAME=postgresql://postgres:postgres@patroni3:5432/app_db?sslmode=disable
-#    ports:
-#      - "9189:9187"
-#    networks:
-#      - app-network
-
-
   # Node exporter для метрик сервера (CPU, память и т.д.)
-#  node-exporter:
-#    image: prom/node-exporter
-#    volumes:
-#      - /proc:/host/proc:ro
-#      - /sys:/host/sys:ro
-#      - /:/rootfs:ro
-#    command:
-#      - '--path.procfs=/host/proc'
-#      - '--path.sysfs=/host/sys'
-#      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
-#    ports:
-#      - "9100:9100"
-#    networks:
-#      - app-network
-#
-##   Prometheus для сбора метрик
-#  prometheus:
-#    container_name: prometheus
-#    image: prom/prometheus
-#    ports:
-#      - "9090:9090"
-#    volumes:
-#      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-#    command:
-#      - '--config.file=/etc/prometheus/prometheus.yml'
-#    depends_on:
-#      - postgres-exporter-1
-#      - postgres-exporter-2
-#      - postgres-exporter-3
-##      - postgres-exporter-shard1-node1
-##      - postgres-exporter-shard1-node2
-##      - postgres-exporter-shard1-node3
-##      - postgres-exporter-shard2-node1
-##      - postgres-exporter-shard2-node2
-##      - postgres-exporter-shard2-node3
-##      - postgres-exporter-shard3-node1
-##      - postgres-exporter-shard3-node2
-##      - postgres-exporter-shard3-node3
-#      - node-exporter
-#    networks:
-#      - app-network
-#
-#  # Grafana для визуализации
-#  grafana:
-#    container_name: grafana
-#    image: grafana/grafana:latest
-#    ports:
-#      - "3000:3000"
-#    volumes:
-#      - grafana_data:/var/lib/grafana
-#      - ./grafana/provisioning:/etc/grafana/provisioning
-#    environment:
-#      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
-#      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
-#      - GF_SECURITY_SECRET_KEY=${GRAFANA_SECURITY_SECRET_KEY}
-#      - GF_USERS_ALLOW_SIGN_UP=false
-#      - GF_AUTH_ANONYMOUS_ENABLED=false
-#    depends_on:
-#      - prometheus
-#    networks:
-#      - app-network
-#    healthcheck:
-#      test: [ "CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
-#      interval: 30s
-#      timeout: 5s
-#      retries: 3
+  node-exporter:
+    image: prom/node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+    networks:
+      - app-network
+
+  #   Prometheus для сбора метрик
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    depends_on:
+      - node-exporter
+    networks:
+      - app-network
+
+  #  # Grafana для визуализации
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_SECURITY_SECRET_KEY=${GRAFANA_SECURITY_SECRET_KEY}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+    depends_on:
+      - prometheus
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
 volumes:
   grafana_data:
-  etcd_data:
+  healthcheck-volume:
+
 
 networks:
   app-network:

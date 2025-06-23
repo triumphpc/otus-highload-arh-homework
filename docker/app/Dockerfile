@@ -10,6 +10,7 @@ RUN swag init -g ./cmd/app/main.go -o ./docs
 RUN CGO_ENABLED=0 GOOS=linux go build -o /social-app ./cmd/app/main.go
 
 FROM alpine:latest
+
 COPY --from=builder /social-app /social-app
 COPY --from=builder /app/docs /docs
 COPY --from=builder /app/migrations /migrations
