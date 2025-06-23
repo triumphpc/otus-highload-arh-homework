@@ -5,13 +5,14 @@ import (
 	"errors"
 	ht "net/http"
 
+	"otus-highload-arh-homework/internal/social/handler/http"
+	"otus-highload-arh-homework/internal/social/transport/service"
+	"otus-highload-arh-homework/pkg/clients/prometheus"
+
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"otus-highload-arh-homework/internal/social/handler/http"
-	"otus-highload-arh-homework/internal/social/transport/service"
-	"otus-highload-arh-homework/pkg/clients/prometheus"
 )
 
 type Server struct {
@@ -58,6 +59,13 @@ func New(
 		{
 			userGroup.GET("/get/:id", userHandler.GetUser)
 			userGroup.GET("/search", userHandler.SearchUsers)
+		}
+
+		dialogGroup := api.Group("/dialog")
+		dialogGroup.Use(http.AuthMiddleware(jwtService))
+		{
+			dialogGroup.POST("/:user_id/send", userHandler.SendDialogMessage)
+			dialogGroup.GET("/:user_id/list", userHandler.GetDialogMessages)
 		}
 	}
 

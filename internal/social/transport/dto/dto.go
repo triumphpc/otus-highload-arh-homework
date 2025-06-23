@@ -52,3 +52,23 @@ type ErrorResponse struct {
 	Error   string `json:"error"`
 	Details string `json:"details"`
 }
+
+type SendMessageRequest struct {
+	Text string `json:"text" binding:"required,min=1,max=1000"`
+}
+
+type DialogMessage struct {
+	SenderID   string    `json:"sender_id"`
+	ReceiverID string    `json:"receiver_id"`
+	Text       string    `json:"text"`
+	SentAt     time.Time `json:"-"`
+	SentAtStr  string    `json:"sent_at"`
+	IsOwn      bool      `json:"is_own"`
+}
+
+// SuccessResponse - универсальный DTO для успешных ответов
+type SuccessResponse struct {
+	Status  string      `json:"status"`
+	Message string      `json:"message,omitempty"`
+	Data    interface{} `json:"data,omitempty"`
+}

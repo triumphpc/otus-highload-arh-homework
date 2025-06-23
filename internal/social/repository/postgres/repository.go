@@ -6,14 +6,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgconn"
-	"github.com/jackc/pgx/v5/pgxpool"
+	"otus-highload-arh-homework/internal/social/entity"
 	"otus-highload-arh-homework/internal/social/repository"
 	"otus-highload-arh-homework/internal/social/repository/dao"
 
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lib/pq"
-
-	"otus-highload-arh-homework/internal/social/entity"
 )
 
 type UserRepository struct {
@@ -229,4 +228,111 @@ func (r *UserRepository) Search(ctx context.Context, firstName, lastName string)
 	}
 
 	return users, nil
+}
+
+// GetOrCreateDialog получает или создает диалог между пользователями
+func (r *UserRepository) getOrCreateDialog(ctx context.Context, user1ID, user2ID int64) (int64, error) {
+	// Упорядочиваем ID пользователей согласно CHECK-ограничению
+	if user1ID > user2ID {
+		user1ID, user2ID = user2ID, user1ID
+	}
+
+	const query = `
+		INSERT INTO dialogs (user1_id, user2_id)
+		VALUES ($1, $2)
+		ON CONFLICT (user1_id, user2_id) DO NOTHING
+		RETURNING dialog_id
+	`
+
+	var dialogID int64
+	err := r.pool.QueryRow(ctx, query, user1ID, user2ID).Scan(&dialogID)
+
+	// Если диалог уже существует
+	if errors.Is(err, sql.ErrNoRows) {
+		const selectQuery = `
+			SELECT dialog_id 
+			FROM dialogs 
+			WHERE user1_id = $1 AND user2_id = $2
+		`
+		err = r.pool.QueryRow(ctx, selectQuery, user1ID, user2ID).Scan(&dialogID)
+	}
+
+	if err != nil {
+		return 0, fmt.Errorf("failed to get or create dialog: %w", err)
+	}
+
+	return dialogID, nil
+}
+
+// StoreDialogMessage сохраняет сообщение в диалоге
+func (r *UserRepository) StoreDialogMessage(ctx context.Context, senderID, recipientID int64, content string) (int64, error) {
+
+	dialogID, err := r.getOrCreateDialog(ctx, senderID, recipientID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get or create dialog: %w", err)
+	}
+
+	const query = `
+		INSERT INTO messages (dialog_id, sender_id, recipient_id, content)
+		VALUES ($1, $2, $3, $4)
+		RETURNING message_id
+	`
+
+	var messageID int64
+	err = r.pool.QueryRow(ctx, query, dialogID, senderID, recipientID, content).Scan(&messageID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to store message: %w", err)
+	}
+
+	return messageID, nil
+}
+
+// GetDialogMessages возвращает все сообщения между двумя пользователями, отсортированные по времени
+func (r *UserRepository) GetDialogMessages(ctx context.Context, senderID, recipientID int64) ([]*entity.DialogMessage, error) {
+	const query = `
+        SELECT 
+            message_id::text,
+            sender_id::text,
+            recipient_id::text,
+            content as text,
+            created_at as sent_at,
+            read_at IS NOT NULL as is_read
+        FROM messages
+        WHERE (sender_id = $1 AND recipient_id = $2)
+           OR (sender_id = $2 AND recipient_id = $1)
+        ORDER BY created_at ASC
+    `
+
+	rows, err := r.pool.Query(ctx, query, senderID, recipientID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query dialog messages: %w", err)
+	}
+	defer rows.Close()
+
+	var messages []*entity.DialogMessage
+	for rows.Next() {
+		var msg entity.DialogMessage
+		err := rows.Scan(
+			&msg.ID,
+			&msg.SenderID,
+			&msg.ReceiverID,
+			&msg.Text,
+			&msg.SentAt,
+			&msg.IsRead,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan message: %w", err)
+		}
+		messages = append(messages, &msg)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	if len(messages) == 0 {
+		return nil, repository.ErrNoMessagesFound
+	}
+
+	return messages, nil
 }

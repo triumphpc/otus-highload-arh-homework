@@ -1,159 +1,141 @@
 services:
-  #  app:
-  #    container_name: app
-  #    build:
-  #      context: ..
-  #      dockerfile: docker/app/Dockerfile
-  #    ports:
-  #      - "8080:8080"
-  #    depends_on:
-  #      - haproxy
-  #    env_file:
-  #      - .env
-  #    networks:
-  #      - app-network
-  #    volumes:
-  #      - ./pg/ssl-cert-snakeoil.pem:/etc/ssl/certs/ssl-cert-snakeoil.pem:ro
-  #      - ./pg/ssl-cert-snakeoil.key:/etc/ssl/private/ssl-cert-snakeoil.key:ro
-  #    expose:
-  #      - "8080"
-  #    healthcheck:
-  #      test: [ "CMD", "wget", "-q", "-O", "-", "http://localhost:8080/health" ]
-  #      interval: 10s
-  #      timeout: 5s
-  #      retries: 3
-  #    command: tail -f /dev/null
-  #    environment: &haproxy_env
-  #      PGSSLMODE: verify-ca
-  #      PGSSLKEY: /etc/ssl/private/ssl-cert-snakeoil.key
-  #      PGSSLCERT: /etc/ssl/certs/ssl-cert-snakeoil.pem
-  #      PGSSLROOTCERT: /etc/ssl/certs/ssl-cert-snakeoil.pem
+    app:
+      container_name: app
+      build:
+        context: ..
+        dockerfile: docker/app/Dockerfile
+      ports:
+        - "8080:8080"
+      depends_on:
+        master:
+          condition: service_healthy
+      env_file:
+        - .env
+      networks:
+        - app-network
+      expose:
+        - "8080"
+      healthcheck:
+        test: [ "CMD", "wget", "-q", "-O", "-", "http://localhost:8080/health" ]
+        interval: 10s
+        timeout: 5s
+        retries: 3
 
-  pg_test:
-    build:
-      context: ..
-      dockerfile: docker/app/Dockerfile.pg
-    networks:
-      - app-network
-    env_file:
-      - .env
-#    command: tail -f /dev/null
+    master:
+      container_name: master
+      image: "citusdata/citus:13.0.3"
+      networks:
+        - app-network
+      ports:
+        - "5432:5432"
+      environment: &AUTH
+        POSTGRES_USER: "postgres"
+        POSTGRES_PASSWORD: "postgres"
+        POSTGRES_DB: "app_db"
+        PGUSER: "postgres"
+        PGPASSWORD: "postgres"
+        POSTGRES_HOST_AUTH_METHOD: "trust"
 
-  master:
-    container_name: master
-    image: "citusdata/citus:13.0.3"
-    networks:
-      - app-network
-    ports:
-      - "5432:5432"
-    environment: &AUTH
-      POSTGRES_USER: "postgres"
-      POSTGRES_PASSWORD: "postgres"
-      POSTGRES_DB: "app_db"
-      PGUSER: "postgres"
-      PGPASSWORD: "postgres"
-      POSTGRES_HOST_AUTH_METHOD: "trust"
+    worker1:
+      image: "citusdata/citus:13.0.3"
+      depends_on: [ manager ]
+      networks:
+        - app-network
+      environment: *AUTH
+      command: "/wait-for-manager.sh"
+      volumes:
+        - healthcheck-volume:/healthcheck
 
-  worker1:
-    image: "citusdata/citus:13.0.3"
-    depends_on: [ manager ]
-    networks:
-      - app-network
-    environment: *AUTH
-    command: "/wait-for-manager.sh"
-    volumes:
-      - healthcheck-volume:/healthcheck
+    worker2:
+      image: "citusdata/citus:13.0.3"
+      depends_on: [ manager ]
+      networks:
+        - app-network
+      environment: *AUTH
+      command: "/wait-for-manager.sh"
+      volumes:
+        - healthcheck-volume:/healthcheck
 
-  worker2:
-    image: "citusdata/citus:13.0.3"
-    depends_on: [ manager ]
-    networks:
-      - app-network
-    environment: *AUTH
-    command: "/wait-for-manager.sh"
-    volumes:
-      - healthcheck-volume:/healthcheck
+    manager:
+      container_name: manager
+      image: "citusdata/membership-manager:0.3.0"
+      volumes:
+        - "${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock"
+        - healthcheck-volume:/healthcheck
+      depends_on: [ master ]
+      networks:
+        - app-network
+      environment: *AUTH
 
-  manager:
-    container_name: manager
-    image: "citusdata/membership-manager:0.3.0"
-    volumes:
-      - "${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock"
-      - healthcheck-volume:/healthcheck
-    depends_on: [ master ]
-    networks:
-      - app-network
-    environment: *AUTH
+    db-seeder:
+      profiles:
+        - seed
+      build:
+        context: .
+        dockerfile: pg/Dockerfile.seeder
+      depends_on:
+        - haproxy
+      env_file:
+        - .env
+      networks:
+        - app-network
+      restart: on-failure
 
-#  db-seeder:
-#    profiles:
-#      - seed
-#    build:
-#      context: .
-#      dockerfile: pg/Dockerfile.seeder
-#    depends_on:
-#      - haproxy
-#    env_file:
-#      - .env
-#    networks:
-#      - app-network
-#    restart: on-failure
+    # Node exporter для метрик сервера (CPU, память и т.д.)
+    node-exporter:
+      image: prom/node-exporter
+      volumes:
+        - /proc:/host/proc:ro
+        - /sys:/host/sys:ro
+        - /:/rootfs:ro
+      command:
+        - '--path.procfs=/host/proc'
+        - '--path.sysfs=/host/sys'
+        - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+      ports:
+        - "9100:9100"
+      networks:
+        - app-network
 
-  # Node exporter для метрик сервера (CPU, память и т.д.)
-  node-exporter:
-    image: prom/node-exporter
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
-    ports:
-      - "9100:9100"
-    networks:
-      - app-network
+    #   Prometheus для сбора метрик
+    prometheus:
+      container_name: prometheus
+      image: prom/prometheus
+      ports:
+        - "9090:9090"
+      volumes:
+        - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      command:
+        - '--config.file=/etc/prometheus/prometheus.yml'
+      depends_on:
+        - node-exporter
+      networks:
+        - app-network
 
-  #   Prometheus для сбора метрик
-  prometheus:
-    container_name: prometheus
-    image: prom/prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-    depends_on:
-      - node-exporter
-    networks:
-      - app-network
-
-  #  # Grafana для визуализации
-  grafana:
-    container_name: grafana
-    image: grafana/grafana:latest
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-    environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
-      - GF_SECURITY_SECRET_KEY=${GRAFANA_SECURITY_SECRET_KEY}
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_AUTH_ANONYMOUS_ENABLED=false
-    depends_on:
-      - prometheus
-    networks:
-      - app-network
-    healthcheck:
-      test: [ "CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+    #  # Grafana для визуализации
+    grafana:
+      container_name: grafana
+      image: grafana/grafana:latest
+      ports:
+        - "3000:3000"
+      volumes:
+        - grafana_data:/var/lib/grafana
+        - ./grafana/provisioning:/etc/grafana/provisioning
+      environment:
+        - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+        - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+        - GF_SECURITY_SECRET_KEY=${GRAFANA_SECURITY_SECRET_KEY}
+        - GF_USERS_ALLOW_SIGN_UP=false
+        - GF_AUTH_ANONYMOUS_ENABLED=false
+      depends_on:
+        - prometheus
+      networks:
+        - app-network
+      healthcheck:
+        test: [ "CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
+        interval: 30s
+        timeout: 5s
+        retries: 3
 
 volumes:
   grafana_data:

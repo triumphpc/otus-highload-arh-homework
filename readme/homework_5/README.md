@@ -424,6 +424,45 @@ Current cluster topology
 
 Решение хорошее, но так и не удалось настроить SSL-сертификаты для клиента. 
 Перешел к кластеру на одном Citus:
+---
+```sql
+SELECT * FROM pg_available_extensions WHERE name = 'citus';
+ name  | default_version | installed_version |          comment           
+-------+-----------------+-------------------+----------------------------
+ citus | 13.0-1          |                   | Citus distributed database
+```
+
+
+Проверил тестовое распределение 
+```sql
+app_db=# SELECT
+             get_shard_id_for_distribution_column('messages', 5) as message_shard_id,
+             get_shard_id_for_distribution_column('dialogs', 5) as dialog_shard_id,
+             get_shard_id_for_distribution_column('users', 5) as user_shard_id;
+ message_shard_id | dialog_shard_id | user_shard_id 
+------------------+-----------------+---------------
+           102078 |          102046 |        102014
+(1 row)
+
+app_db=# SELECT
+             shardid,
+             nodename,
+             pg_size_pretty(shard_size)
+         FROM citus_shards
+         WHERE shardid IN (
+                           get_shard_id_for_distribution_column('users', 5),
+                           get_shard_id_for_distribution_column('dialogs', 5),
+                           get_shard_id_for_distribution_column('messages', 5)
+             );
+ shardid | nodename  | pg_size_pretty 
+---------+-----------+----------------
+  102046 | localhost | 8192 bytes
+  102078 | localhost | 16 kB
+  102014 | localhost | 32 kB
+```
+
+
+Все ок. Теперь реализуем ручки и обработчики для диалогов
 
 
 

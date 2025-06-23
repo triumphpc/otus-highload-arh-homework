@@ -11,7 +11,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/pressly/goose/v3"
 	"otus-highload-arh-homework/internal/social/config"
 	"otus-highload-arh-homework/internal/social/repository/postgres"
 	"otus-highload-arh-homework/internal/social/transport/server"
@@ -20,6 +19,8 @@ import (
 	userUC "otus-highload-arh-homework/internal/social/usecase/user"
 	"otus-highload-arh-homework/pkg/auth"
 	"otus-highload-arh-homework/pkg/clients/pg"
+
+	"github.com/pressly/goose/v3"
 )
 
 // @title Social Network API

@@ -11,4 +11,6 @@ type UserRepository interface {
 	GetByID(ctx context.Context, id int) (*entity.User, error)
 	GetByEmail(ctx context.Context, email string) (*entity.User, error)
 	Search(ctx context.Context, firstName, lastName string) ([]*entity.User, error)
+	StoreDialogMessage(ctx context.Context, senderID, recipientID int64, content string) (int64, error)
+	GetDialogMessages(ctx context.Context, senderID, recipientID int64) ([]*entity.DialogMessage, error)
 }
