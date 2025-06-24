@@ -31,6 +31,10 @@ recreate-docker:
 	docker compose --file docker/compose.yml --env-file docker/.env down -v
 	docker compose --file docker/compose.yml --env-file docker/.env up --build -d
 
+clean:
+	docker compose --file docker/compose.yml down
+	docker rmi patroni-citus
+
 .PHONY: swagger
 swagger:
 	@echo "Generating Swagger docs..."
