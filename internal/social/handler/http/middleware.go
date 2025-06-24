@@ -4,8 +4,9 @@ package http
 import (
 	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"otus-highload-arh-homework/internal/social/transport/service"
+
+	"github.com/gin-gonic/gin"
 )
 
 func AuthMiddleware(jwtService *service.JWTGenerator) gin.HandlerFunc {

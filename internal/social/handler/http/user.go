@@ -96,7 +96,7 @@ func (h *UserHandler) SearchUsers(c *gin.Context) {
 // @Param input body dto.SendMessageRequest true "Текст сообщения"
 // @Security ApiKeyAuth
 // @Success 200 {object} dto.SuccessResponse
-// @Router /user/{user_id}/send [post]
+// @Router /dialog/{user_id}/send [post]
 func (h *UserHandler) SendDialogMessage(c *gin.Context) {
 	receiverIDStr := c.Param("user_id")
 
@@ -109,16 +109,7 @@ func (h *UserHandler) SendDialogMessage(c *gin.Context) {
 		return
 	}
 
-	senderIDStr := c.GetString("userID")
-	senderID, err := strconv.ParseInt(senderIDStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "Invalid sender ID in token",
-			Details: "Please reauthenticate",
-		})
-		return
-	}
-
+	senderID := c.Value("userID").(int)
 	var req dto.SendMessageRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse{
@@ -137,7 +128,7 @@ func (h *UserHandler) SendDialogMessage(c *gin.Context) {
 
 	err = h.userService.SendDialogMessage(
 		c.Request.Context(),
-		senderID,
+		int64(senderID),
 		receiverID,
 		req.Text,
 	)
@@ -169,7 +160,7 @@ func (h *UserHandler) SendDialogMessage(c *gin.Context) {
 // @Param user_id path string true "ID пользователя"
 // @Security ApiKeyAuth
 // @Success 200 {array} dto.DialogMessage
-// @Router /user/{user_id}/dialog [get]
+// @Router /dialog/:user_id/list [get]
 func (h *UserHandler) GetDialogMessages(c *gin.Context) {
 	otherUserIDStr := c.Param("user_id")
 
@@ -182,19 +173,11 @@ func (h *UserHandler) GetDialogMessages(c *gin.Context) {
 		return
 	}
 
-	currentUserIDStr := c.GetString("userID")
-	currentUserID, err := strconv.ParseInt(currentUserIDStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
-			Error:   "Invalid user ID in token",
-			Details: "Please reauthenticate",
-		})
-		return
-	}
+	currentUserID := c.Value("userID").(int)
 
 	messages, err := h.userService.GetDialogMessages(
 		c.Request.Context(),
-		currentUserID,
+		int64(currentUserID),
 		otherUserID,
 	)
 	if err != nil {

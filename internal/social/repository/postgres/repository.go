@@ -10,6 +10,7 @@ import (
 	"otus-highload-arh-homework/internal/social/repository"
 	"otus-highload-arh-homework/internal/social/repository/dao"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lib/pq"
@@ -232,33 +233,30 @@ func (r *UserRepository) Search(ctx context.Context, firstName, lastName string)
 
 // GetOrCreateDialog получает или создает диалог между пользователями
 func (r *UserRepository) getOrCreateDialog(ctx context.Context, user1ID, user2ID int64) (int64, error) {
-	// Упорядочиваем ID пользователей согласно CHECK-ограничению
 	if user1ID > user2ID {
 		user1ID, user2ID = user2ID, user1ID
 	}
 
-	const query = `
-		INSERT INTO dialogs (user1_id, user2_id)
-		VALUES ($1, $2)
-		ON CONFLICT (user1_id, user2_id) DO NOTHING
-		RETURNING dialog_id
-	`
-
+	// Сначала попробуем найти существующий диалог
 	var dialogID int64
-	err := r.pool.QueryRow(ctx, query, user1ID, user2ID).Scan(&dialogID)
+	err := r.pool.QueryRow(ctx,
+		"SELECT dialog_id FROM dialogs WHERE user1_id = $1 AND user2_id = $2",
+		user1ID, user2ID).Scan(&dialogID)
 
-	// Если диалог уже существует
-	if errors.Is(err, sql.ErrNoRows) {
-		const selectQuery = `
-			SELECT dialog_id 
-			FROM dialogs 
-			WHERE user1_id = $1 AND user2_id = $2
-		`
-		err = r.pool.QueryRow(ctx, selectQuery, user1ID, user2ID).Scan(&dialogID)
+	if err == nil {
+		return dialogID, nil // Диалог найден
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return 0, fmt.Errorf("failed to find dialog: %w", err)
 	}
 
+	// Диалога нет - создаем новый
+	err = r.pool.QueryRow(ctx,
+		"INSERT INTO dialogs (user1_id, user2_id) VALUES ($1, $2) RETURNING dialog_id",
+		user1ID, user2ID).Scan(&dialogID)
+
 	if err != nil {
-		return 0, fmt.Errorf("failed to get or create dialog: %w", err)
+		return 0, fmt.Errorf("failed to create dialog: %w", err)
 	}
 
 	return dialogID, nil

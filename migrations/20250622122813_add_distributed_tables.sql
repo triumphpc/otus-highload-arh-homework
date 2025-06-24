@@ -27,6 +27,8 @@ CREATE TABLE dialogs (
                          CONSTRAINT user_order CHECK (user1_id < user2_id)
 );
 
+CREATE INDEX idx_dialogs_user_pair ON dialogs (user1_id, user2_id);
+
 SELECT create_distributed_table('dialogs', 'user1_id', colocate_with => 'users');
 
 CREATE TABLE messages (

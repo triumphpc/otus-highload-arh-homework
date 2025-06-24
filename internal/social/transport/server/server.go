@@ -54,18 +54,18 @@ func New(
 			authGroup.POST("/login", authHandler.Login)
 		}
 
-		userGroup := api.Group("/user")
-		userGroup.Use(http.AuthMiddleware(jwtService))
-		{
-			userGroup.GET("/get/:id", userHandler.GetUser)
-			userGroup.GET("/search", userHandler.SearchUsers)
-		}
-
 		dialogGroup := api.Group("/dialog")
 		dialogGroup.Use(http.AuthMiddleware(jwtService))
 		{
 			dialogGroup.POST("/:user_id/send", userHandler.SendDialogMessage)
 			dialogGroup.GET("/:user_id/list", userHandler.GetDialogMessages)
+		}
+
+		userGroup := api.Group("/user")
+		userGroup.Use(http.AuthMiddleware(jwtService))
+		{
+			userGroup.GET("/get/:id", userHandler.GetUser)
+			userGroup.GET("/search", userHandler.SearchUsers)
 		}
 	}
 
