@@ -91,6 +91,38 @@ services:
         PGPASSWORD=$$POSTGRES_PASSWORD psql -h pgpool -U $$POSTGRES_USER -d $$POSTGRES_DB -f /docker-entrypoint-initdb.d/seed.sql
         "
 
+  # Экспортер метрик PostgreSQL для Prometheus
+  postgres-exporter-1:
+    image: prometheuscommunity/postgres-exporter
+    container_name: postgres-exporter-1
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:postgres@master:5432/app_db?sslmode=disable
+    ports:
+      - "9187:9187"
+    networks:
+      - app-network
+
+  postgres-exporter-2:
+    image: prometheuscommunity/postgres-exporter
+    container_name: postgres-exporter-2
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:postgres@worker1:5432/app_db?sslmode=disable
+    ports:
+      - "9188:9187"
+    networks:
+      - app-network
+
+  postgres-exporter-3:
+    image: prometheuscommunity/postgres-exporter
+    container_name: postgres-exporter-3
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:postgres@worker2:5432/app_db?sslmode=disable
+    ports:
+      - "9189:9187"
+    networks:
+      - app-network
+
+
   # Node exporter для метрик сервера (CPU, память и т.д.)
     node-exporter:
       image: prom/node-exporter
@@ -119,6 +151,9 @@ services:
         - '--config.file=/etc/prometheus/prometheus.yml'
       depends_on:
         - node-exporter
+        - master
+        - worker1
+        - worker2
       networks:
         - app-network
 
@@ -171,12 +206,10 @@ services:
         - --loglevel warning
         - --databases 2
 
-
 volumes:
   grafana_data:
   healthcheck-volume:
   redis_data:
-
 
 networks:
   app-network:

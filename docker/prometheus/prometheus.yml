@@ -7,6 +7,14 @@ scrape_configs:
     static_configs:
       - targets: ['localhost:9090']
 
+  - job_name: 'postgresql'
+    static_configs:
+      - targets:
+          - 'postgres-exporter-1:9187'
+          - 'postgres-exporter-2:9187'
+          - 'postgres-exporter-3:9187'
+    metrics_path: /metrics
+
   - job_name: 'node'
     static_configs:
       - targets: [ 'node-exporter:9100' ]
@@ -15,17 +23,3 @@ scrape_configs:
     static_configs:
       - targets: [ 'app:8080' ]  # Для доступа к локальному сервису
     metrics_path: '/metrics'
-
-  - job_name: 'postgres-cluster'
-    static_configs:
-      - targets:
-          - 'postgres-exporter-coord1:9187'
-          - 'postgres-exporter-coord2:9187'
-          - 'postgres-exporter-coord3:9187'
-          - 'postgres-exporter-work1-1:9187'
-          - 'postgres-exporter-work1-2:9187'
-          - 'postgres-exporter-work2-1:9187'
-          - 'postgres-exporter-work2-2:9187'
-          # Если work3-* включены:
-#          - 'postgres-exporter-work3-1:9187'
-#          - 'postgres-exporter-work3-2:9187'
