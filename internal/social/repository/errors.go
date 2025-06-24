@@ -7,3 +7,7 @@ var (
 	ErrUserAlreadyExists = errors.New("user already exists")
 	ErrNoMessagesFound   = errors.New("no messages found")
 )
+
+var (
+	ErrPostNotFound = errors.New("post not found")
+)

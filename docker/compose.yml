@@ -70,16 +70,26 @@ services:
     db-seeder:
       profiles:
         - seed
-      build:
-        context: .
-        dockerfile: pg/Dockerfile.seeder
+      container_name: db-seeder
+      image: postgres:14
       depends_on:
-        - haproxy
+        pgpool:
+          condition: service_healthy
       env_file:
         - .env
       networks:
         - app-network
+      volumes:
+        - ./pg/seed.sql:/docker-entrypoint-initdb.d/seed.sql
       restart: on-failure
+      command: >
+        bash -c "
+        while ! PGPASSWORD=$$POSTGRES_PASSWORD pg_isready -h pgpool -p 5432 -U $$POSTGRES_USER; do
+        echo 'Waiting for pgpool...';
+        sleep 5;
+        done;
+        PGPASSWORD=$$POSTGRES_PASSWORD psql -h pgpool -U $$POSTGRES_USER -d $$POSTGRES_DB -f /docker-entrypoint-initdb.d/seed.sql
+        "
 
     # Node exporter для метрик сервера (CPU, память и т.д.)
     node-exporter:
@@ -136,10 +146,35 @@ services:
         interval: 30s
         timeout: 5s
         retries: 3
+    redis:
+      image: redis:latest
+      container_name: redis
+      restart: always
+      ports:
+        - "6379:6379"
+      volumes:
+        - redis_data:/data
+      networks:
+        - app-network
+      environment:
+        - REDIS_PASSWORD=secret
+      healthcheck:
+        test: [ "CMD", "redis-cli", "-a", "secret", "ping" ]
+        interval: 10s
+        timeout: 5s
+        retries: 3
+      command:
+        - redis-server
+        - --requirepass secret
+        - --save 60 1
+        - --loglevel warning
+        - --databases 2
+
 
 volumes:
   grafana_data:
   healthcheck-volume:
+    redis_data:
 
 
 networks:
