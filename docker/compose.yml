@@ -91,7 +91,7 @@ services:
         PGPASSWORD=$$POSTGRES_PASSWORD psql -h pgpool -U $$POSTGRES_USER -d $$POSTGRES_DB -f /docker-entrypoint-initdb.d/seed.sql
         "
 
-    # Node exporter для метрик сервера (CPU, память и т.д.)
+  # Node exporter для метрик сервера (CPU, память и т.д.)
     node-exporter:
       image: prom/node-exporter
       volumes:
@@ -146,6 +146,7 @@ services:
         interval: 30s
         timeout: 5s
         retries: 3
+
     redis:
       image: redis:latest
       container_name: redis
@@ -174,7 +175,7 @@ services:
 volumes:
   grafana_data:
   healthcheck-volume:
-    redis_data:
+  redis_data:
 
 
 networks:

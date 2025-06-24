@@ -9,6 +9,7 @@ import (
 	"otus-highload-arh-homework/internal/social/repository"
 	"otus-highload-arh-homework/internal/social/repository/dao"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lib/pq"
