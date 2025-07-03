@@ -1,249 +1,102 @@
 services:
-  app:
-    container_name: app
-    build:
-      context: ..
-      dockerfile: docker/app/Dockerfile
-    ports:
-      - "8080:8080"
-    depends_on:
-      - pgpool
-    env_file:
-      - .env
-    networks:
-      - app-network
-    expose:
-      - "8080"
-    healthcheck:
-      test: [ "CMD", "wget", "-q", "-O", "-", "http://localhost:8080/health" ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+    app:
+      container_name: app
+      build:
+        context: ..
+        dockerfile: docker/app/Dockerfile
+      ports:
+        - "8080:8080"
+      depends_on:
+        master:
+          condition: service_healthy
+      env_file:
+        - .env
+      networks:
+        - app-network
+      expose:
+        - "8080"
+      healthcheck:
+        test: [ "CMD", "wget", "-q", "-O", "-", "http://localhost:8080/health" ]
+        interval: 10s
+        timeout: 5s
+        retries: 3
 
-  etcd1:
-    container_name: etcd1
-    image: bitnami/etcd:latest
-    environment:
-      - ALLOW_NONE_AUTHENTICATION=yes
-      - ETCD_NAME=etcd1
-      - ETCD_INITIAL_ADVERTISE_PEER_URLS=http://etcd1:2380
-      - ETCD_LISTEN_PEER_URLS=http://0.0.0.0:2380
-      - ETCD_LISTEN_CLIENT_URLS=http://0.0.0.0:2379
-      - ETCD_ADVERTISE_CLIENT_URLS=http://etcd1:2379
-      - ETCD_INITIAL_CLUSTER_TOKEN=patroni-cluster
-      - ETCD_INITIAL_CLUSTER=etcd1=http://etcd1:2380
-      - ETCD_INITIAL_CLUSTER_STATE=new
-    volumes:
-      - etcd_data:/bitnami/etcd
-    ports:
-      - "12379:2379"
-      - "12380:2380"
-    networks:
-      - app-network
+    master:
+      container_name: master
+      image: "citusdata/citus:13.0.3"
+      networks:
+        - app-network
+      ports:
+        - "5432:5432"
+      environment: &AUTH
+        POSTGRES_USER: "postgres"
+        POSTGRES_PASSWORD: "postgres"
+        POSTGRES_DB: "app_db"
+        PGUSER: "postgres"
+        PGPASSWORD: "postgres"
+        POSTGRES_HOST_AUTH_METHOD: "trust"
 
-  patroni1:
-    container_name: patroni1
-    image: bitnami/postgresql-repmgr:latest
-    environment:
-      # Базовые параметры
-      - REPMGR_USERNAME=repmgr
-      - REPMGR_PASSWORD=repmgrpassword
-      - REPMGR_PRIMARY_HOST=patroni1
-      - REPMGR_PARTNER_NODES=patroni-1,patroni-2,patroni-3
-      - REPMGR_NODE_NAME=patroni-1
-      - REPMGR_NODE_NETWORK_NAME=patroni1
-      - REPMGR_NODE_ID=1
+    worker1:
+      image: "citusdata/citus:13.0.3"
+      depends_on: [ manager ]
+      networks:
+        - app-network
+      environment: *AUTH
+      command: "/wait-for-manager.sh"
+      volumes:
+        - healthcheck-volume:/healthcheck
 
-      # Параметры PostgreSQL
-      - POSTGRESQL_USERNAME=postgres
-      - POSTGRESQL_PASSWORD=postgres
-      - POSTGRESQL_POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=app_db
+    worker2:
+      image: "citusdata/citus:13.0.3"
+      depends_on: [ manager ]
+      networks:
+        - app-network
+      environment: *AUTH
+      command: "/wait-for-manager.sh"
+      volumes:
+        - healthcheck-volume:/healthcheck
 
-      # Параметры репликации
-      - POSTGRESQL_REPLICATION_USER=replicator
-      - POSTGRESQL_REPLICATION_PASSWORD=repsecret
-      - POSTGRESQL_SYNCHRONOUS_COMMIT=off
-      - POSTGRESQL_SYNCHRONOUS_STANDBY_NAMES="ANY 2 (patroni2,patroni3)"
-      - POSTGRESQL_NUM_SYNCHRONOUS_REPLICAS=2
-      - POSTGRESQL_MAX_WAL_SENDERS=5
-      - POSTGRESQL_WAL_KEEP_SIZE=1024
-      - POSTGRESQL_WAL_LEVEL=replica
+    manager:
+      container_name: manager
+      image: "citusdata/membership-manager:0.3.0"
+      volumes:
+        - "${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock"
+        - healthcheck-volume:/healthcheck
+      depends_on: [ master ]
+      networks:
+        - app-network
+      environment: *AUTH
 
-    volumes:
-      - postgres_data1:/bitnami/postgresql
-    ports:
-      - "15432:5432"
-      - "18008:8008"
-    networks:
-      - app-network
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1 -p 5432 || exit 1" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-  patroni2:
-    container_name: patroni2
-    image: bitnami/postgresql-repmgr:latest
-    environment:
-      # Базовые параметры
-      - REPMGR_USERNAME=repmgr
-      - REPMGR_PASSWORD=repmgrpassword
-      - REPMGR_PRIMARY_HOST=patroni1
-      - REPMGR_PARTNER_NODES=patroni-1,patroni-2,patroni-3
-      - REPMGR_NODE_NAME=patroni-2
-      - REPMGR_NODE_NETWORK_NAME=patroni2
-      - REPMGR_NODE_ID=2
-
-      # Параметры PostgreSQL
-      - POSTGRESQL_USERNAME=postgres
-      - POSTGRESQL_PASSWORD=postgres
-      - POSTGRESQL_POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=app_db
-
-      # Параметры репликации
-      - POSTGRESQL_REPLICATION_USER=replicator
-      - POSTGRESQL_REPLICATION_PASSWORD=repsecret
-      - POSTGRESQL_SYNCHRONOUS_COMMIT=off
-      - POSTGRESQL_SYNCHRONOUS_STANDBY_NAMES="ANY 2 (patroni2,patroni3)"
-      - POSTGRESQL_NUM_SYNCHRONOUS_REPLICAS=2
-      - POSTGRESQL_MAX_WAL_SENDERS=5
-      - POSTGRESQL_WAL_KEEP_SIZE=1024
-      - POSTGRESQL_WAL_LEVEL=replica
-
-    volumes:
-      - postgres_data2:/bitnami/postgresql
-    ports:
-      - "25432:5432"
-      - "28008:8008"
-    networks:
-      - app-network
-    depends_on:
-      patroni1:
-        condition: service_healthy
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1 -p 5432 || exit 1" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-  patroni3:
-    container_name: patroni3
-    image: bitnami/postgresql-repmgr:latest
-    environment:
-      # Базовые параметры
-      - REPMGR_USERNAME=repmgr
-      - REPMGR_PASSWORD=repmgrpassword
-      - REPMGR_PRIMARY_HOST=patroni1
-      - REPMGR_PARTNER_NODES=patroni-1,patroni-2,patroni-3
-      - REPMGR_NODE_NAME=patroni-3
-      - REPMGR_NODE_NETWORK_NAME=patroni3
-      - REPMGR_NODE_ID=3
-
-      # Параметры PostgreSQL
-      - POSTGRESQL_USERNAME=postgres
-      - POSTGRESQL_PASSWORD=postgres
-      - POSTGRESQL_POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=app_db
-
-      # Параметры репликации
-      - POSTGRESQL_REPLICATION_USER=replicator
-      - POSTGRESQL_REPLICATION_PASSWORD=repsecret
-      - POSTGRESQL_SYNCHRONOUS_COMMIT=off
-      - POSTGRESQL_SYNCHRONOUS_STANDBY_NAMES="ANY 2 (patroni2,patroni3)"
-      - POSTGRESQL_NUM_SYNCHRONOUS_REPLICAS=2
-      - POSTGRESQL_MAX_WAL_SENDERS=5
-      - POSTGRESQL_WAL_KEEP_SIZE=1024
-      - POSTGRESQL_WAL_LEVEL=replica
-
-    volumes:
-      - postgres_data3:/bitnami/postgresql
-    ports:
-      - "35432:5432"
-      - "38008:8008"
-    networks:
-      - app-network
-    depends_on:
-      patroni1:
-        condition: service_healthy
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -h 127.0.0.1 -p 5432 || exit 1" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-  pgpool:
-    image: bitnami/pgpool:latest
-    container_name: pgpool
-    environment:
-      PGPOOL_BACKEND_NODES: 0:patroni1:5432,1:patroni2:5432,2:patroni3:5432
-      PGPOOL_SR_CHECK_USER: postgres
-      PGPOOL_SR_CHECK_PASSWORD: postgres
-      PGPOOL_ENABLE_LDAP: 'no'
-      PGPOOL_ADMIN_USERNAME: postgres
-      PGPOOL_ADMIN_PASSWORD: postgres
-      PGPOOL_POSTGRES_USERNAME: postgres
-      PGPOOL_POSTGRES_PASSWORD: postgres
-      PGPOOL_ENABLE_LOAD_BALANCING: 'yes'
-      PGPOOL_ENABLE_STATEMENT_LOAD_BALANCING: 'yes'
-    ports:
-      - "5432:5432"
-      - "9443:9443"
-    networks:
-      - app-network
-    depends_on:
-      patroni1:
-        condition: service_healthy
-      patroni2:
-        condition: service_healthy
-      patroni3:
-        condition: service_healthy
-    volumes:
-      - pgpool_data:/bitnami/pgpool
-    healthcheck:
-      test: |
+    db-seeder:
+      profiles:
+        - seed
+      container_name: db-seeder
+      image: postgres:14
+      depends_on:
+        pgpool:
+          condition: service_healthy
+      env_file:
+        - .env
+      networks:
+        - app-network
+      volumes:
+        - ./pg/seed.sql:/docker-entrypoint-initdb.d/seed.sql
+      restart: on-failure
+      command: >
         bash -c "
-        export PGPASSWORD=$$PGPOOL_SR_CHECK_PASSWORD
-        psql -U postgres -h localhost -p 5432 -c 'SELECT 1 AS connection_test;' | grep -q '1' || exit 1
+        while ! PGPASSWORD=$$POSTGRES_PASSWORD pg_isready -h pgpool -p 5432 -U $$POSTGRES_USER; do
+        echo 'Waiting for pgpool...';
+        sleep 5;
+        done;
+        PGPASSWORD=$$POSTGRES_PASSWORD psql -h pgpool -U $$POSTGRES_USER -d $$POSTGRES_DB -f /docker-entrypoint-initdb.d/seed.sql
         "
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  db-seeder:
-    profiles:
-      - seed
-    container_name: db-seeder
-    image: postgres:14
-    depends_on:
-      pgpool:
-        condition: service_healthy
-    env_file:
-      - .env
-    networks:
-      - app-network
-    volumes:
-      - ./pg/seed.sql:/docker-entrypoint-initdb.d/seed.sql
-    restart: on-failure
-    command: >
-      bash -c "
-      while ! PGPASSWORD=$$POSTGRES_PASSWORD pg_isready -h pgpool -p 5432 -U $$POSTGRES_USER; do
-      echo 'Waiting for pgpool...';
-      sleep 5;
-      done;
-      PGPASSWORD=$$POSTGRES_PASSWORD psql -h pgpool -U $$POSTGRES_USER -d $$POSTGRES_DB -f /docker-entrypoint-initdb.d/seed.sql
-      "
 
   # Экспортер метрик PostgreSQL для Prometheus
   postgres-exporter-1:
     image: prometheuscommunity/postgres-exporter
     container_name: postgres-exporter-1
     environment:
-      - DATA_SOURCE_NAME=postgresql://postgres:postgres@patroni1:5432/app_db?sslmode=disable
+      - DATA_SOURCE_NAME=postgresql://postgres:postgres@master:5432/app_db?sslmode=disable
     ports:
       - "9187:9187"
     networks:
@@ -253,7 +106,7 @@ services:
     image: prometheuscommunity/postgres-exporter
     container_name: postgres-exporter-2
     environment:
-      - DATA_SOURCE_NAME=postgresql://postgres:postgres@patroni2:5432/app_db?sslmode=disable
+      - DATA_SOURCE_NAME=postgresql://postgres:postgres@worker1:5432/app_db?sslmode=disable
     ports:
       - "9188:9187"
     networks:
@@ -263,7 +116,7 @@ services:
     image: prometheuscommunity/postgres-exporter
     container_name: postgres-exporter-3
     environment:
-      - DATA_SOURCE_NAME=postgresql://postgres:postgres@patroni3:5432/app_db?sslmode=disable
+      - DATA_SOURCE_NAME=postgresql://postgres:postgres@worker2:5432/app_db?sslmode=disable
     ports:
       - "9189:9187"
     networks:
@@ -271,95 +124,91 @@ services:
 
 
   # Node exporter для метрик сервера (CPU, память и т.д.)
-  node-exporter:
-    image: prom/node-exporter
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
-    ports:
-      - "9100:9100"
-    networks:
-      - app-network
+    node-exporter:
+      image: prom/node-exporter
+      volumes:
+        - /proc:/host/proc:ro
+        - /sys:/host/sys:ro
+        - /:/rootfs:ro
+      command:
+        - '--path.procfs=/host/proc'
+        - '--path.sysfs=/host/sys'
+        - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+      ports:
+        - "9100:9100"
+      networks:
+        - app-network
 
-  #   Prometheus для сбора метрик
-  prometheus:
-    container_name: prometheus
-    image: prom/prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-    depends_on:
-      - postgres-exporter-1
-      - postgres-exporter-2
-      - postgres-exporter-3
-      - node-exporter
-    networks:
-      - app-network
+    #   Prometheus для сбора метрик
+    prometheus:
+      container_name: prometheus
+      image: prom/prometheus
+      ports:
+        - "9090:9090"
+      volumes:
+        - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      command:
+        - '--config.file=/etc/prometheus/prometheus.yml'
+      depends_on:
+        - node-exporter
+        - master
+        - worker1
+        - worker2
+      networks:
+        - app-network
 
-  # Grafana для визуализации
-  grafana:
-    container_name: grafana
-    image: grafana/grafana:latest
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
-    environment:
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
-      - GF_SECURITY_SECRET_KEY=${GRAFANA_SECURITY_SECRET_KEY}
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_AUTH_ANONYMOUS_ENABLED=false
-    depends_on:
-      - prometheus
-    networks:
-      - app-network
-    healthcheck:
-      test: [ "CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
-      interval: 30s
-      timeout: 5s
-      retries: 3
+    #  # Grafana для визуализации
+    grafana:
+      container_name: grafana
+      image: grafana/grafana:latest
+      ports:
+        - "3000:3000"
+      volumes:
+        - grafana_data:/var/lib/grafana
+        - ./grafana/provisioning:/etc/grafana/provisioning
+      environment:
+        - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER}
+        - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+        - GF_SECURITY_SECRET_KEY=${GRAFANA_SECURITY_SECRET_KEY}
+        - GF_USERS_ALLOW_SIGN_UP=false
+        - GF_AUTH_ANONYMOUS_ENABLED=false
+      depends_on:
+        - prometheus
+      networks:
+        - app-network
+      healthcheck:
+        test: [ "CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3000/api/health || exit 1" ]
+        interval: 30s
+        timeout: 5s
+        retries: 3
 
-  redis:
-    image: redis:latest
-    container_name: redis
-    restart: always
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - app-network
-    environment:
-      - REDIS_PASSWORD=secret
-    healthcheck:
-      test: [ "CMD", "redis-cli", "-a", "secret", "ping" ]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-    command:
-      - redis-server
-      - --requirepass secret
-      - --save 60 1
-      - --loglevel warning
-      - --databases 2
+    redis:
+      image: redis:latest
+      container_name: redis
+      restart: always
+      ports:
+        - "6379:6379"
+      volumes:
+        - redis_data:/data
+      networks:
+        - app-network
+      environment:
+        - REDIS_PASSWORD=secret
+      healthcheck:
+        test: [ "CMD", "redis-cli", "-a", "secret", "ping" ]
+        interval: 10s
+        timeout: 5s
+        retries: 3
+      command:
+        - redis-server
+        - --requirepass secret
+        - --save 60 1
+        - --loglevel warning
+        - --databases 2
 
 volumes:
   grafana_data:
-  etcd_data:
-  postgres_data1:
-  postgres_data2:
-  postgres_data3:
-  pgpool_data:
+  healthcheck-volume:
   redis_data:
 
 networks:

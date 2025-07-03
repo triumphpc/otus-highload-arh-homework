@@ -15,6 +15,8 @@ type UserRepository interface {
 	RemoveFriend(ctx context.Context, userID, friendID int) error
 	CheckFriendship(ctx context.Context, userID, friendID int) (bool, error)
 	GetFriendsIDs(ctx context.Context, userID int) ([]int, error)
+	StoreDialogMessage(ctx context.Context, senderID, recipientID int64, content string) (int64, error)
+	GetDialogMessages(ctx context.Context, senderID, recipientID int64) ([]*entity.DialogMessage, error)
 }
 
 // PostRepository определяет контракт для работы с хранилищем постов
