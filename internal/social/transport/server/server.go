@@ -7,6 +7,7 @@ import (
 
 	"otus-highload-arh-homework/internal/social/handler/http"
 	"otus-highload-arh-homework/internal/social/transport/service"
+	"otus-highload-arh-homework/internal/social/transport/websocket"
 	"otus-highload-arh-homework/pkg/clients/prometheus"
 
 	"github.com/gin-gonic/gin"
@@ -22,6 +23,7 @@ type Server struct {
 	postHandler *http.PostHandler
 	jwtService  *service.JWTGenerator
 	httpServer  *ht.Server
+	wsServer    *websocket.Server
 }
 
 func New(
@@ -41,6 +43,9 @@ func New(
 	userHandler := http.NewUserHandler(userService)
 	postHandler := http.NewPostHandler(postService)
 
+	// Инициализация WebSocket сервера
+	//wsServer := websocket.NewServer()
+
 	// Swagger docs route
 	router.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
@@ -48,6 +53,12 @@ func New(
 	router.Use(prometheus.MetricsMiddleware())
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	router.GET("/health", healthCheck)
+
+	// WebSocket endpoint с аутентификацией
+	//router.GET("/ws/post/feed/posted", http.AuthMiddleware(jwtService), func(c *gin.Context) {
+	//	userID := c.GetInt("userID") // Получаем userID из middleware
+	//	wsServer.HandleConnection(c.Writer, c.Request, userID)
+	//})
 
 	// Роуты
 	api := router.Group("/api/v1")

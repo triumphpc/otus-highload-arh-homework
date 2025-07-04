@@ -5,6 +5,7 @@ import (
 	"time"
 
 	cachewarmer "otus-highload-arh-homework/internal/social/transport/cache"
+	"otus-highload-arh-homework/pkg/clients/kafka"
 	"otus-highload-arh-homework/pkg/clients/pg"
 	"otus-highload-arh-homework/pkg/clients/redis"
 
@@ -14,11 +15,13 @@ import (
 
 type Config struct {
 	HTTP  HTTP
+	WS    WS
 	App   App
 	Auth  Auth
 	Redis redis.Config
 	PG    pg.Config
 	Cache cachewarmer.Config
+	Kafka kafka.Config
 }
 
 type HTTP struct {
@@ -27,6 +30,10 @@ type HTTP struct {
 	WriteTimeout    time.Duration `env:"HTTP_WRITE_TIMEOUT" env-default:"5s"`
 	IdleTimeout     time.Duration `env:"HTTP_IDLE_TIMEOUT" env-default:"30s"`
 	ShutdownTimeout time.Duration `env:"HTTP_SHUTDOWN_TIMEOUT" env-default:"10s"`
+}
+
+type WS struct {
+	Port string `env:"WS_PORT" env-default:"8081"`
 }
 
 type App struct {

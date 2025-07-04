@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	"otus-highload-arh-homework/internal/social/entity"
@@ -26,21 +27,28 @@ type cacheWarmer interface {
 	Get(ctx context.Context, key string, dest any) error
 }
 
+type postFeeder interface {
+	Publish(ctx context.Context, key string, value any) error
+}
+
 type PostService struct {
 	postUC      postUseCase
 	friendUC    friendUseCase
 	cacheWarmer cacheWarmer
+	postFeeder  postFeeder
 }
 
 func NewPostService(
 	postUC postUseCase,
 	friendUC friendUseCase,
 	warmer cacheWarmer,
+	feeder postFeeder,
 ) *PostService {
 	return &PostService{
 		postUC:      postUC,
 		friendUC:    friendUC,
 		cacheWarmer: warmer,
+		postFeeder:  feeder,
 	}
 }
 
@@ -60,6 +68,24 @@ func (s *PostService) CreatePost(ctx context.Context, authorID int, text string)
 		}
 		return "", fmt.Errorf("failed to create post: %w", err)
 	}
+
+	// Обновление ленты ws
+	go func() {
+		event := dto.FeedUpdateEvent{
+			PostID:    postID,
+			AuthorID:  authorID,
+			Action:    "create",
+			Text:      text,
+			Timestamp: time.Now().Unix(),
+		}
+
+		// Используем authorID как ключ для партиционирования
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+		if err := s.postFeeder.Publish(ctx, strconv.Itoa(authorID), event); err != nil {
+			log.Printf("failed to publish feed update event: %v", err)
+		}
+	}()
 
 	// Прогрев кеша
 	go s.warmCache(authorID)
@@ -94,6 +120,23 @@ func (s *PostService) UpdatePost(ctx context.Context, authorID int, postID, text
 		}
 	}
 
+	// Отправка в ленту ws
+	go func() {
+		event := dto.FeedUpdateEvent{
+			PostID:    postID,
+			AuthorID:  authorID,
+			Action:    "update",
+			Text:      text,
+			Timestamp: time.Now().Unix(),
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+		if err := s.postFeeder.Publish(ctx, strconv.Itoa(authorID), event); err != nil {
+			log.Printf("failed to publish feed update event: %v", err)
+		}
+	}()
+
 	// Прогрев кеша
 	go s.warmCache(authorID)
 
@@ -119,6 +162,22 @@ func (s *PostService) DeletePost(ctx context.Context, authorID int, postID strin
 			return fmt.Errorf("failed to delete post: %w", err)
 		}
 	}
+
+	// Отправка в ленту по ws
+	go func() {
+		event := dto.FeedUpdateEvent{
+			PostID:    postID,
+			AuthorID:  authorID,
+			Action:    "delete",
+			Timestamp: time.Now().Unix(),
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer cancel()
+		if err := s.postFeeder.Publish(ctx, strconv.Itoa(authorID), event); err != nil {
+			log.Printf("failed to publish feed update event: %v", err)
+		}
+	}()
 
 	// Прогрев кеша
 	go s.warmCache(authorID)
@@ -168,11 +227,8 @@ func (s *PostService) GetFeed(ctx context.Context, userID, offset, limit int) ([
 	// Пробуем получить из кэша
 	cachedPosts, err := s.getFromCache(ctx, userID, offset, limit)
 	if err == nil {
-		log.Println("Get feed from cache")
 		return cachedPosts, nil
 	}
-
-	log.Println("Get feed from db")
 
 	posts, err := s.postUC.GetFeed(ctx, userID, offset, limit)
 	if err != nil {
