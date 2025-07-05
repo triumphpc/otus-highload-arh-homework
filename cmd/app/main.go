@@ -20,6 +20,7 @@ import (
 	postUC "otus-highload-arh-homework/internal/social/usecase/post"
 	userUC "otus-highload-arh-homework/internal/social/usecase/user"
 	"otus-highload-arh-homework/pkg/auth"
+	"otus-highload-arh-homework/pkg/clients/kafka"
 	"otus-highload-arh-homework/pkg/clients/pg"
 	"otus-highload-arh-homework/pkg/clients/redis"
 
@@ -68,6 +69,18 @@ func main() {
 		}
 	}()
 
+	// Инициализация Kafka Producer
+	feedProducer := kafka.NewProducer(
+		[]string{cfg.Kafka.Address},
+		cfg.Kafka.FeedUpdatesTopic,
+	)
+	defer func(feedProducer *kafka.Producer) {
+		err := feedProducer.Close()
+		if err != nil {
+			log.Printf("Failed to close Kafka producer: %v", err)
+		}
+	}(feedProducer)
+
 	// 2. Вспомогательные сервисы
 	hasher := auth.NewBcryptHasher(cfg.Auth.HashCost)
 
@@ -89,7 +102,7 @@ func main() {
 	jwtService := authInternal.NewJWTGenerator(cfg.Auth.JwtSecretKey, cfg.Auth.JwtDuration)
 	authService := authInternal.NewAuthService(authUseCase, jwtService)
 	userService := authInternal.NewUserService(userUseCase, friendUseCase)
-	postService := authInternal.NewPostService(postUseCase, friendUseCase, cacheWarmer)
+	postService := authInternal.NewPostService(postUseCase, friendUseCase, cacheWarmer, feedProducer)
 
 	// 7. Запуск воркеров для обработки задач прогрева кэша
 	go func() {

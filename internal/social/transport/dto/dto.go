@@ -74,6 +74,14 @@ type PostResponse struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
+type FeedUpdateEvent struct {
+	PostID    string `json:"post_id"`
+	AuthorID  int    `json:"author_id"`
+	Action    string `json:"action"` // "create", "update", "delete"
+	Text      string `json:"text,omitempty"`
+	Timestamp int64  `json:"timestamp"`
+}
+
 type SendMessageRequest struct {
 	Text string `json:"text" binding:"required,min=1,max=1000"`
 }
