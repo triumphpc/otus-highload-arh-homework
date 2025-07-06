@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"otus-highload-arh-homework/internal/social/entity"
 	"otus-highload-arh-homework/internal/social/repository"
@@ -13,13 +14,19 @@ type passwordHasher interface {
 	Check(password, hash string) bool
 }
 
-type AuthUseCase struct {
-	repo   repository.UserRepository
-	hasher passwordHasher
+type emailCasher interface {
+	HasEmail(ctx context.Context, email string) (bool, error)
+	SetEmail(ctx context.Context, email string) error
 }
 
-func NewAuth(repo repository.UserRepository, hasher passwordHasher) *AuthUseCase {
-	return &AuthUseCase{repo: repo, hasher: hasher}
+type AuthUseCase struct {
+	repo        repository.UserRepository
+	hasher      passwordHasher
+	emailCasher emailCasher
+}
+
+func NewAuth(repo repository.UserRepository, hasher passwordHasher, casher emailCasher) *AuthUseCase {
+	return &AuthUseCase{repo: repo, hasher: hasher, emailCasher: casher}
 }
 
 func (uc *AuthUseCase) Register(ctx context.Context, user *entity.User, password string) (*entity.User, error) {
@@ -28,10 +35,21 @@ func (uc *AuthUseCase) Register(ctx context.Context, user *entity.User, password
 		return nil, entity.ErrUnderageUser
 	}
 
-	// 2. Проверка уникальности email
-	if _, err := uc.repo.GetByEmail(ctx, user.Email); !errors.Is(err, repository.ErrUserNotFound) {
+	// 2. Проверим, есть ли уже такой в KV хранилище
+	ok, err := uc.emailCasher.HasEmail(ctx, user.Email)
+	if err != nil {
+		return nil, fmt.Errorf("check email: %w", err)
+	}
+
+	if ok {
 		return nil, repository.ErrUserAlreadyExists
 	}
+
+	// 2. Проверка уникальности email
+	// переведено н KV проверку
+	//if _, err := uc.repo.GetByEmail(ctx, user.Email); !errors.Is(err, repository.ErrUserNotFound) {
+	//	return nil, repository.ErrUserAlreadyExists
+	//}
 
 	// 3. Хеширование пароля
 	hash, err := uc.hasher.Hash(password)
@@ -42,6 +60,11 @@ func (uc *AuthUseCase) Register(ctx context.Context, user *entity.User, password
 	// 4. Сохранение
 	if err := uc.repo.Create(ctx, user, hash); err != nil {
 		return nil, err
+	}
+
+	err = uc.emailCasher.SetEmail(ctx, user.Email)
+	if err != nil {
+		return nil, fmt.Errorf("set email in cache: %w", err)
 	}
 
 	return user, nil
