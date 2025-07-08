@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
+	"time"
 
 	"otus-highload-arh-homework/internal/social/entity"
 	"otus-highload-arh-homework/internal/social/repository"
@@ -16,7 +18,7 @@ type passwordHasher interface {
 
 type emailCasher interface {
 	HasEmail(ctx context.Context, email string) (bool, error)
-	SetEmail(ctx context.Context, email string) error
+	DeleteEmail(ctx context.Context, email string) error
 }
 
 type AuthUseCase struct {
@@ -45,27 +47,33 @@ func (uc *AuthUseCase) Register(ctx context.Context, user *entity.User, password
 		return nil, repository.ErrUserAlreadyExists
 	}
 
-	// 2. Проверка уникальности email
-	// переведено н KV проверку
-	//if _, err := uc.repo.GetByEmail(ctx, user.Email); !errors.Is(err, repository.ErrUserNotFound) {
-	//	return nil, repository.ErrUserAlreadyExists
-	//}
+	go func(user entity.User, password string) {
+		var err error
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+		defer func() {
+			if err != nil {
+				delErr := uc.emailCasher.DeleteEmail(ctx, user.Email)
+				err = errors.Join(err, delErr)
+				log.Println(fmt.Errorf("email check failed: %w", err))
+			}
 
-	// 3. Хеширование пароля
-	hash, err := uc.hasher.Hash(password)
-	if err != nil {
-		return nil, err
-	}
+			cancel()
+		}()
+		// 3. Асинхронное сохранение в основном storage
+		hash, err := uc.hasher.Hash(password)
+		if err != nil {
+			return
+		}
 
-	// 4. Сохранение
-	if err := uc.repo.Create(ctx, user, hash); err != nil {
-		return nil, err
-	}
+		// 4. Сохранение
+		if err := uc.repo.Create(ctx, &user, hash); err != nil {
+			return
+		}
 
-	err = uc.emailCasher.SetEmail(ctx, user.Email)
-	if err != nil {
-		return nil, fmt.Errorf("set email in cache: %w", err)
-	}
+		log.Println("user registered async")
+	}(*user, password)
+
+	log.Println("user registered done")
 
 	return user, nil
 }
