@@ -88,15 +88,15 @@ func main() {
 	userRepo := postgres.NewUserRepository(pgPool)
 	postRepo := postgres.NewPostRepository(pgPool)
 
-	// 4. Бизнес слои
-	authUseCase := authUC.NewAuth(userRepo, hasher)
+	// 4. Инициализация очереди и CacheWarmer
+	redisQueue := cachewarmer.NewRedisQueue(redisClient)
+	cacheWarmer := cachewarmer.New(redisQueue, redisClient)
+
+	// 5. Бизнес слои
+	authUseCase := authUC.NewAuth(userRepo, hasher, cacheWarmer)
 	userUseCase := userUC.New(userRepo)
 	friendUseCase := userUC.NewFriendUseCase(userRepo)
 	postUseCase := postUC.NewPostUseCase(postRepo)
-
-	// 5. Инициализация очереди и CacheWarmer
-	redisQueue := cachewarmer.NewRedisQueue(redisClient)
-	cacheWarmer := cachewarmer.New(redisQueue, redisClient)
 
 	// 6. Сервисы транспортного уровня
 	jwtService := authInternal.NewJWTGenerator(cfg.Auth.JwtSecretKey, cfg.Auth.JwtDuration)
