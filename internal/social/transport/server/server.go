@@ -37,6 +37,7 @@ func New(
 	// Middleware
 	router.Use(gin.Logger())
 	router.Use(gin.Recovery())
+	router.Use(RequestIDMiddleware())
 
 	// Инициализация handler'ов
 	authHandler := http.NewAuthHandler(authService)
@@ -53,12 +54,6 @@ func New(
 	router.Use(prometheus.MetricsMiddleware())
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 	router.GET("/health", healthCheck)
-
-	// WebSocket endpoint с аутентификацией
-	//router.GET("/ws/post/feed/posted", http.AuthMiddleware(jwtService), func(c *gin.Context) {
-	//	userID := c.GetInt("userID") // Получаем userID из middleware
-	//	wsServer.HandleConnection(c.Writer, c.Request, userID)
-	//})
 
 	// Роуты
 	api := router.Group("/api/v1")
@@ -101,6 +96,17 @@ func New(
 		postGroup.PUT("/delete/:id", postHandler.DeletePost)
 		postGroup.GET("/get/:id", postHandler.GetPost)
 		postGroup.GET("/feed", postHandler.GetFeed)
+	}
+
+	// Новая версия API (v2)
+	v2 := api.Group("/v2")
+	{
+		dialogGroup := v2.Group("/dialog")
+		dialogGroup.Use(http.AuthMiddleware(jwtService))
+		{
+			dialogGroup.POST("/:user_id/send", userHandler.SendDialogMessageV2)
+			dialogGroup.GET("/:user_id/list", userHandler.GetDialogMessagesV2)
+		}
 	}
 
 	return &Server{

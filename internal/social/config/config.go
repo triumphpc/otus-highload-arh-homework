@@ -14,14 +14,18 @@ import (
 )
 
 type Config struct {
-	HTTP  HTTP
-	WS    WS
-	App   App
-	Auth  Auth
-	Redis redis.Config
-	PG    pg.Config
-	Cache cachewarmer.Config
-	Kafka kafka.Config
+	HTTP   HTTP
+	WS     WS
+	App    App
+	Auth   Auth
+	Redis  redis.Config
+	PG     pg.Config
+	Cache  cachewarmer.Config
+	Kafka  kafka.Config
+	Dialog struct {
+		Address string        `env:"DIALOG_SERVICE_ADDRESS" env-default:"localhost:50051"`
+		Timeout time.Duration `env:"DIALOG_SERVICE_TIMEOUT" env-default:"5s"`
+	}
 }
 
 type HTTP struct {
