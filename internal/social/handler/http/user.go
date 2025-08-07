@@ -14,6 +14,7 @@ import (
 	"otus-highload-arh-homework/internal/social/transport/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -321,6 +322,7 @@ func (h *UserHandler) SendDialogMessageV2(c *gin.Context) {
 		req.Text,
 	)
 	if err != nil {
+		logrus.Error(err)
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponseV2{
 			Error:     "Failed to send message",
 			RequestID: requestID,

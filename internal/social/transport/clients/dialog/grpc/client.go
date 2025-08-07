@@ -1,8 +1,7 @@
-package dialog
+package grpc
 
 import (
 	"context"
-	"errors"
 	"log"
 	"time"
 
@@ -26,10 +25,8 @@ func New(addr string, timeout time.Duration) (*Client, error) {
 	)
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
+		return nil, err
 	}
-	defer func(conn *grpc.ClientConn) {
-		err = errors.Join(err, conn.Close())
-	}(conn)
 
 	return &Client{
 		conn:    conn,

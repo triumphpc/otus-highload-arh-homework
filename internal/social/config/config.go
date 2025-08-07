@@ -23,8 +23,9 @@ type Config struct {
 	Cache  cachewarmer.Config
 	Kafka  kafka.Config
 	Dialog struct {
-		Address string        `env:"DIALOG_SERVICE_ADDRESS" env-default:"localhost:50051"`
-		Timeout time.Duration `env:"DIALOG_SERVICE_TIMEOUT" env-default:"5s"`
+		Address    string        `env:"DIALOG_SERVICE_ADDRESS" env-default:":50051"`
+		ClientAddr string        `env:"DIALOG_CLIENT_ADDRESS" env-default:"dialog:50051"`
+		Timeout    time.Duration `env:"DIALOG_SERVICE_TIMEOUT" env-default:"5s"`
 	}
 }
 

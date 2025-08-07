@@ -99,7 +99,7 @@ func New(
 	}
 
 	// Новая версия API (v2)
-	v2 := api.Group("/v2")
+	v2 := router.Group("/api/v2")
 	{
 		dialogGroup := v2.Group("/dialog")
 		dialogGroup.Use(http.AuthMiddleware(jwtService))

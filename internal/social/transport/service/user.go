@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"otus-highload-arh-homework/internal/social/entity"
-	"otus-highload-arh-homework/internal/social/transport/clients/dialog"
+	"otus-highload-arh-homework/internal/social/transport/clients/dialog/grpc"
 	"otus-highload-arh-homework/internal/social/transport/dto"
 	userUC "otus-highload-arh-homework/internal/social/usecase/user"
 )
@@ -30,13 +30,13 @@ type friendUseCase interface {
 type UserService struct {
 	userUC       userUserCase
 	friendUC     friendUseCase
-	dialogClient *dialog.Client
+	dialogClient *grpc.Client
 }
 
 func NewUserService(
 	userUC userUserCase,
 	friendUC friendUseCase,
-	dialogClient *dialog.Client,
+	dialogClient *grpc.Client,
 ) *UserService {
 	return &UserService{
 		userUC:       userUC,

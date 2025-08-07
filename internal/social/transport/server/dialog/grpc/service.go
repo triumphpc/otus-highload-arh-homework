@@ -15,10 +15,10 @@ import (
 
 type DialogService struct {
 	dialogv1.UnimplementedDialogServiceServer
-	uc user.UserUseCase
+	uc *user.UserUseCase
 }
 
-func NewDialogService(uc user.UserUseCase) *DialogService {
+func NewDialogService(uc *user.UserUseCase) *DialogService {
 	return &DialogService{uc: uc}
 }
 

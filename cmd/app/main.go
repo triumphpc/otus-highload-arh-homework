@@ -14,7 +14,7 @@ import (
 	"otus-highload-arh-homework/internal/social/config"
 	"otus-highload-arh-homework/internal/social/repository/postgres"
 	cachewarmer "otus-highload-arh-homework/internal/social/transport/cache"
-	"otus-highload-arh-homework/internal/social/transport/clients/dialog"
+	"otus-highload-arh-homework/internal/social/transport/clients/dialog/grpc"
 	"otus-highload-arh-homework/internal/social/transport/server"
 	authInternal "otus-highload-arh-homework/internal/social/transport/service"
 	authUC "otus-highload-arh-homework/internal/social/usecase/auth"
@@ -82,12 +82,15 @@ func main() {
 		}
 	}(feedProducer)
 
-	// В функции main после инициализации других клиентов
-	dialogClient, err := dialog.New(cfg.Dialog.Address, cfg.Dialog.Timeout)
+	dialogClient, err := grpc.New(cfg.Dialog.ClientAddr, cfg.Dialog.Timeout)
 	if err != nil {
 		log.Fatalf("Failed to initialize Dialog gRPC client: %v", err)
 	}
-	defer func(dialogClient *dialog.Client) {
+	defer func(dialogClient *grpc.Client) {
+		err = errors.Join(err, dialogClient.Close())
+	}(dialogClient)
+
+	defer func(dialogClient *grpc.Client) {
 		err = errors.Join(err, dialogClient.Close())
 	}(dialogClient)
 

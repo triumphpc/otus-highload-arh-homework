@@ -3,21 +3,15 @@ package main
 import (
 	"context"
 	"log"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
-	"otus-highload-arh-homework/internal/repository/postgres"
-	"otus-highload-arh-homework/internal/server/grpc"
 	"otus-highload-arh-homework/internal/social/config"
 	postgres2 "otus-highload-arh-homework/internal/social/repository/postgres"
-	"otus-highload-arh-homework/internal/usecase/dialog"
+	grpcServer "otus-highload-arh-homework/internal/social/transport/server/dialog/grpc"
+	userUC "otus-highload-arh-homework/internal/social/usecase/user"
 	"otus-highload-arh-homework/pkg/clients/pg"
-	dialogv1 "otus-highload-arh-homework/pkg/proto/dialog/v1"
-
-	"google.golang.org/grpc"
 )
 
 func main() {
@@ -36,27 +30,17 @@ func main() {
 
 	// 3. Репозитории
 	userRepo := postgres2.NewUserRepository(pgPool)
+	userUseCase := userUC.New(userRepo)
 
-	//todoo
-
-	// Инициализация слоев
-	repo := postgres.NewDialogRepository(pgPool)
-	uc := dialog.New(repo)
-	service := grpc.NewDialogService(uc)
-
-	// Запуск gRPC сервера
-	srv := grpc.NewServer()
-	dialogv1.RegisterDialogServiceServer(srv, service)
-
-	lis, err := net.Listen("tcp", ":"+os.Getenv("GRPC_PORT"))
+	srv, err := grpcServer.New(userUseCase, cfg.Dialog.Address)
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("Failed to create gRPC server: %v", err)
 	}
 
 	go func() {
-		log.Printf("gRPC server listening on %s", lis.Addr())
-		if err := srv.Serve(lis); err != nil {
-			log.Fatalf("failed to serve: %v", err)
+		log.Printf("gRPC server listening on port %s", cfg.Dialog.Address)
+		if err := srv.Run(); err != nil {
+			log.Fatalf("Failed to serve: %v", err)
 		}
 	}()
 
@@ -64,20 +48,6 @@ func main() {
 	<-ctx.Done()
 	log.Println("Shutting down server...")
 
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer shutdownCancel()
-
-	stopped := make(chan struct{})
-	go func() {
-		srv.GracefulStop()
-		close(stopped)
-	}()
-
-	select {
-	case <-stopped:
-	case <-shutdownCtx.Done():
-		srv.Stop()
-	}
-
+	srv.Stop()
 	log.Println("Server stopped gracefully")
 }
