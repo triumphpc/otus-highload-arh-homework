@@ -7,12 +7,15 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"otus-highload-arh-homework/internal/social/repository"
 	"otus-highload-arh-homework/internal/social/transport/dto"
 	"otus-highload-arh-homework/internal/social/transport/service"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc/metadata"
 )
 
 type UserHandler struct {
@@ -279,6 +282,89 @@ func (h *UserHandler) GetDialogMessages(c *gin.Context) {
 			})
 		}
 
+		return
+	}
+
+	c.JSON(http.StatusOK, messages)
+}
+
+// SendDialogMessageV2 godoc
+// @Summary Отправить сообщение (v2)
+// @Tags dialog-v2
+// @Accept json
+// @Produce json
+// @Param user_id path string true "ID получателя"
+// @Param input body dto.SendMessageRequest true "Текст сообщения"
+// @Security ApiKeyAuth
+// @Success 200 {object} dto.SuccessResponseV2
+// @Header 200 {string} x-request-id "Идентификатор запроса"
+// @Router /api/v2/dialog/{user_id}/send [post]
+func (h *UserHandler) SendDialogMessageV2(c *gin.Context) {
+	requestID := c.GetString("x-request-id")
+	receiverIDStr := c.Param("user_id")
+	senderID := c.MustGet("userID").(int)
+
+	var req dto.SendMessageRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponseV2{
+			Error:     "Invalid request body",
+			RequestID: requestID,
+			Timestamp: time.Now().UTC(),
+		})
+		return
+	}
+
+	// Вызов сервиса
+	err := h.userService.SendDialogMessageV2(
+		metadata.NewOutgoingContext(c.Request.Context(), metadata.Pairs("x-request-id", requestID)),
+		senderID,
+		receiverIDStr,
+		req.Text,
+	)
+	if err != nil {
+		logrus.Error(err)
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponseV2{
+			Error:     "Failed to send message",
+			RequestID: requestID,
+			Timestamp: time.Now().UTC(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponseV2{
+		Status:    "success",
+		Message:   "Message sent",
+		RequestID: requestID,
+		Timestamp: time.Now().UTC(),
+	})
+}
+
+// GetDialogMessagesV2 godoc
+// @Summary Получить диалог (v2)
+// @Tags dialog-v2
+// @Produce json
+// @Param user_id path string true "ID собеседника"
+// @Security ApiKeyAuth
+// @Success 200 {array} dto.DialogMessageV2
+// @Header 200 {string} x-request-id "Идентификатор запроса"
+// @Router /api/v2/dialog/{user_id}/list [get]
+func (h *UserHandler) GetDialogMessagesV2(c *gin.Context) {
+	requestID := c.GetString("x-request-id")
+	otherUserIDStr := c.Param("user_id")
+	currentUserID := c.MustGet("userID").(int)
+
+	// Вызов сервиса
+	messages, err := h.userService.GetDialogMessagesV2(
+		metadata.NewOutgoingContext(c.Request.Context(), metadata.Pairs("x-request-id", requestID)),
+		currentUserID,
+		otherUserIDStr,
+	)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponseV2{
+			Error:     "Failed to get messages",
+			RequestID: requestID,
+			Timestamp: time.Now().UTC(),
+		})
 		return
 	}
 
