@@ -101,3 +101,27 @@ type SuccessResponse struct {
 	Message string      `json:"message,omitempty"`
 	Data    interface{} `json:"data,omitempty"`
 }
+
+type DialogMessageV2 struct {
+	ID         string    `json:"id"`
+	SenderID   string    `json:"sender_id"`
+	ReceiverID string    `json:"receiver_id"`
+	Text       string    `json:"text"`
+	SentAt     time.Time `json:"sent_at"`
+	IsOwn      bool      `json:"is_own"`
+}
+
+type ErrorResponseV2 struct {
+	Error     string    `json:"error"`
+	Details   string    `json:"details,omitempty"`
+	RequestID string    `json:"request_id"`
+	Timestamp time.Time `json:"timestamp"`
+}
+
+type SuccessResponseV2 struct {
+	Status    string      `json:"status"`
+	Message   string      `json:"message,omitempty"`
+	Data      interface{} `json:"data,omitempty"`
+	RequestID string      `json:"request_id"`
+	Timestamp time.Time   `json:"timestamp"`
+}

@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package dialog.v1;
+
+option go_package = "social/pkg/dialog/v1;dialogv1";
+
+import "google/protobuf/timestamp.proto";
+
+service DialogService {
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  rpc GetMessages(GetMessagesRequest) returns (GetMessagesResponse);
+}
+
+message SendMessageRequest {
+  string sender_id = 1;
+  string receiver_id = 2;
+  string text = 3;
+}
+
+message SendMessageResponse {
+  bool success = 1;
+  string message_id = 2;
+  google.protobuf.Timestamp sent_at = 3;
+}
+
+message GetMessagesRequest {
+  string user_id = 1;
+  string other_user_id = 2;
+}
+
+message DialogMessage {
+  string message_id = 1;
+  string sender_id = 2;
+  string receiver_id = 3;
+  string text = 4;
+  google.protobuf.Timestamp sent_at = 5;
+}
+
+message GetMessagesResponse {
+  repeated DialogMessage messages = 1;
+}

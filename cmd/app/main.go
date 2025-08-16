@@ -14,6 +14,7 @@ import (
 	"otus-highload-arh-homework/internal/social/config"
 	"otus-highload-arh-homework/internal/social/repository/postgres"
 	cachewarmer "otus-highload-arh-homework/internal/social/transport/cache"
+	"otus-highload-arh-homework/internal/social/transport/clients/dialog/grpc"
 	"otus-highload-arh-homework/internal/social/transport/server"
 	authInternal "otus-highload-arh-homework/internal/social/transport/service"
 	authUC "otus-highload-arh-homework/internal/social/usecase/auth"
@@ -81,6 +82,18 @@ func main() {
 		}
 	}(feedProducer)
 
+	dialogClient, err := grpc.New(cfg.Dialog.ClientAddr, cfg.Dialog.Timeout)
+	if err != nil {
+		log.Fatalf("Failed to initialize Dialog gRPC client: %v", err)
+	}
+	defer func(dialogClient *grpc.Client) {
+		err = errors.Join(err, dialogClient.Close())
+	}(dialogClient)
+
+	defer func(dialogClient *grpc.Client) {
+		err = errors.Join(err, dialogClient.Close())
+	}(dialogClient)
+
 	// 2. Вспомогательные сервисы
 	hasher := auth.NewBcryptHasher(cfg.Auth.HashCost)
 
@@ -101,7 +114,7 @@ func main() {
 	// 6. Сервисы транспортного уровня
 	jwtService := authInternal.NewJWTGenerator(cfg.Auth.JwtSecretKey, cfg.Auth.JwtDuration)
 	authService := authInternal.NewAuthService(authUseCase, jwtService)
-	userService := authInternal.NewUserService(userUseCase, friendUseCase)
+	userService := authInternal.NewUserService(userUseCase, friendUseCase, dialogClient)
 	postService := authInternal.NewPostService(postUseCase, friendUseCase, cacheWarmer, feedProducer)
 
 	// 7. Запуск воркеров для обработки задач прогрева кэша

@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"otus-highload-arh-homework/internal/social/entity"
+	"otus-highload-arh-homework/internal/social/transport/clients/dialog/grpc"
 	"otus-highload-arh-homework/internal/social/transport/dto"
 	userUC "otus-highload-arh-homework/internal/social/usecase/user"
 )
@@ -26,17 +28,20 @@ type friendUseCase interface {
 }
 
 type UserService struct {
-	userUC   userUserCase
-	friendUC friendUseCase
+	userUC       userUserCase
+	friendUC     friendUseCase
+	dialogClient *grpc.Client
 }
 
 func NewUserService(
 	userUC userUserCase,
 	friendUC friendUseCase,
+	dialogClient *grpc.Client,
 ) *UserService {
 	return &UserService{
-		userUC:   userUC,
-		friendUC: friendUC,
+		userUC:       userUC,
+		friendUC:     friendUC,
+		dialogClient: dialogClient,
 	}
 }
 
@@ -180,6 +185,53 @@ func (s *UserService) GetDialogMessages(ctx context.Context, currentUserID, othe
 			Text:       msg.Text,
 			SentAtStr:  msg.SentAt.Format("2006-01-02 15:04:05"),
 			IsOwn:      msg.SenderID == currentUserIDStr,
+		})
+	}
+
+	return result, nil
+}
+
+func (s *UserService) SendDialogMessageV2(ctx context.Context, senderID int, receiverIDStr, text string) error {
+	// Валидация параметров
+	if strings.TrimSpace(text) == "" {
+		return errors.New("message text cannot be empty")
+	}
+
+	if _, err := strconv.Atoi(receiverIDStr); err != nil {
+		return fmt.Errorf("invalid receiver ID: %w", err)
+	}
+
+	// Вызов gRPC клиента
+	err := s.dialogClient.SendMessage(ctx, strconv.Itoa(senderID), receiverIDStr, text)
+	if err != nil {
+		return fmt.Errorf("gRPC SendMessage failed: %w", err)
+	}
+
+	return nil
+}
+
+func (s *UserService) GetDialogMessagesV2(ctx context.Context, currentUserID int, otherUserIDStr string) ([]dto.DialogMessageV2, error) {
+	// Валидация ID собеседника
+	if _, err := strconv.Atoi(otherUserIDStr); err != nil {
+		return nil, fmt.Errorf("invalid user ID: %w", err)
+	}
+
+	// Вызов gRPC клиента
+	messages, err := s.dialogClient.GetMessages(ctx, strconv.Itoa(currentUserID), otherUserIDStr)
+	if err != nil {
+		return nil, fmt.Errorf("gRPC GetMessages failed: %w", err)
+	}
+
+	// Конвертация protobuf -> DTO
+	result := make([]dto.DialogMessageV2, 0, len(messages))
+	for _, msg := range messages {
+		result = append(result, dto.DialogMessageV2{
+			ID:         msg.MessageId,
+			SenderID:   msg.SenderId,
+			ReceiverID: msg.ReceiverId,
+			Text:       msg.Text,
+			SentAt:     msg.SentAt.AsTime(),
+			IsOwn:      msg.SenderId == strconv.Itoa(currentUserID),
 		})
 	}
 
