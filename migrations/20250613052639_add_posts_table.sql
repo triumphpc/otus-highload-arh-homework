@@ -1,7 +1,7 @@
 -- +goose Up
 -- +goose StatementBegin
 -- Создание таблицы постов
-CREATE TABLE posts (
+CREATE TABLE  IF NOT EXISTS posts (
                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                        author_id INTEGER NOT NULL REFERENCES users(id),
                        text TEXT NOT NULL,
@@ -10,8 +10,8 @@ CREATE TABLE posts (
 );
 
 -- Индексы для быстрого поиска
-CREATE INDEX idx_posts_author_id ON posts(author_id);
-CREATE INDEX idx_posts_created_at ON posts(created_at);
+CREATE INDEX  IF NOT EXISTS idx_posts_author_id ON posts(author_id);
+CREATE INDEX  IF NOT EXISTS idx_posts_created_at ON posts(created_at);
 
 -- Триггер для обновления updated_at
 CREATE OR REPLACE FUNCTION update_post_updated_at()
