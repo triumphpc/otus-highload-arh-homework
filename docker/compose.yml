@@ -1,11 +1,59 @@
 services:
-    app:
-      container_name: app
+    # Nginx балансировщик
+    nginx:
+      image: nginx:1.21
+      container_name: nginx
+      restart: unless-stopped
+      depends_on:
+        app1:
+          condition: service_healthy
+        app2:
+          condition: service_healthy
+      volumes:
+        - ./nginx/conf.d:/etc/nginx/conf.d  # Конфиг Nginx
+      ports:
+        - "80:80"
+        - "8080:8080"
+      networks:
+        - app-network
+
+    # Первый экземпляр приложения
+    app1:
+      container_name: app1
       build:
         context: ..
         dockerfile: docker/app/Dockerfile
+      depends_on:
+        master:
+            condition: service_healthy
+        kafka:
+            condition: service_healthy
+        redis:
+            condition: service_healthy
+        haproxy:
+          condition: service_started
+      restart: on-failure:5
       ports:
-        - "8080:8080"
+        - "8082:8080"
+      env_file:
+        - .env
+      networks:
+        - app-network
+
+
+      healthcheck:
+        test: [ "CMD", "wget", "-q", "-O", "-", "http://localhost:8080/health" ]
+        interval: 10s
+        timeout: 5s
+        retries: 3
+        start_period: 30s
+
+    # Второй экземпляр приложения
+    app2:
+      container_name: app2
+      build:
+        context: ..
+        dockerfile: docker/app/Dockerfile
       depends_on:
         master:
           condition: service_healthy
@@ -13,17 +61,22 @@ services:
           condition: service_healthy
         redis:
           condition: service_healthy
+        haproxy:
+          condition: service_started
+      ports:
+        - "8083:8080"
+      restart: on-failure:5
       env_file:
         - .env
       networks:
         - app-network
-      expose:
-        - "8080"
+
       healthcheck:
         test: [ "CMD", "wget", "-q", "-O", "-", "http://localhost:8080/health" ]
         interval: 10s
         timeout: 5s
         retries: 3
+        start_period: 30s
 
     dialog:
       container_name: dialog
@@ -33,7 +86,7 @@ services:
       ports:
         - "50051:50051"
       depends_on:
-        - app
+        - app1
       env_file:
         - .env
       networks:
@@ -53,7 +106,7 @@ services:
       ports:
         - "8081:8081"
       depends_on:
-        - app
+        - app1
       env_file:
         - .env
       networks:
@@ -313,6 +366,31 @@ services:
           cub kafka-ready -b kafka:9092 1 60 &&
           kafka-topics --create --bootstrap-server kafka:9092 --topic feed_updates --partitions 1 --replication-factor 1 --if-not-exists"
 
+    haproxy:
+      image: haproxy:latest
+      container_name: haproxy
+      volumes:
+        - ./haproxy/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+      ports:
+        - "5000:5000"  # HAProxy statistics
+        - "5001:5001"  # PostgreSQL via HAProxy
+        - "5002:5002"  # PostgreSQL slave
+      depends_on:
+        - master
+        - worker1
+        - worker2
+      env_file:
+        - .env
+      networks:
+        - app-network
+      healthcheck:
+        test: [ "CMD", "pg_isready", "-h", "localhost", "-p", "5001", "-U", "postgres" ]
+        interval: 10s
+        timeout: 5s
+        retries: 3
+        start_period: 30s
+
+
 volumes:
   grafana_data:
   healthcheck-volume:
@@ -321,5 +399,3 @@ volumes:
 networks:
   app-network:
     driver: bridge
-
-
