@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
-CREATE INDEX users_name_trgm_idx ON users
+CREATE INDEX  IF NOT EXISTS users_name_trgm_idx ON users
 USING gin (
     first_name gin_trgm_ops,
     last_name gin_trgm_ops

@@ -1,6 +1,6 @@
 -- +goose Up
 -- +goose StatementBegin
-CREATE TABLE friends (
+CREATE TABLE  IF NOT EXISTS friends (
                          user_id INT NOT NULL,
                          friend_id INT NOT NULL,
                          created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -10,7 +10,7 @@ CREATE TABLE friends (
                          CHECK (user_id <> friend_id)
 );
 
-CREATE INDEX idx_friends_friend_id_user_id ON friends(friend_id, user_id);
+CREATE INDEX  IF NOT EXISTS idx_friends_friend_id_user_id ON friends(friend_id, user_id);
 -- +goose StatementEnd
 
 -- +goose Down
