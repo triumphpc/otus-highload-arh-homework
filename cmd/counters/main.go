@@ -13,6 +13,7 @@ import (
 	"otus-highload-arh-homework/internal/social/config"
 	postgres2 "otus-highload-arh-homework/internal/social/repository/postgres"
 	cachewarmer "otus-highload-arh-homework/internal/social/transport/cache"
+	queue2 "otus-highload-arh-homework/internal/social/transport/queue"
 	"otus-highload-arh-homework/internal/social/transport/server"
 	authInternal "otus-highload-arh-homework/internal/social/transport/service"
 	authUC "otus-highload-arh-homework/internal/social/usecase/auth"
@@ -50,7 +51,7 @@ func main() {
 	// Вспомогательные
 	hasher := auth.NewBcryptHasher(cfg.Auth.HashCost)
 
-	// 3. Репозитории
+	// Репозитории
 	userRepo := postgres2.NewUserRepository(pgPool)
 
 	// Очереди
@@ -60,13 +61,18 @@ func main() {
 
 	// Бизнес слой
 	authUseCase := authUC.NewAuth(userRepo, hasher, cacheWarmer)
-	// todo
 	userUseCase := userUC.New(userRepo, redisTaskQueue, cacheWarmer)
 
 	// Транспортный уровень
 	jwtService := authInternal.NewJWTGenerator(cfg.Auth.JwtSecretKey, cfg.Auth.JwtDuration)
 	authService := authInternal.NewAuthService(authUseCase, jwtService)
 	userService := authInternal.NewUserService(userUseCase, nil, nil)
+
+	// Таски на расчет количества непрочитанных
+	go func() {
+		log.Println("Starting StartCounterWorkers...", cfg.HTTPCounter.NumWorkers)
+		queue2.StartCountersWorkers(ctx, redisClient, int(cfg.HTTPCounter.NumWorkers), userService)
+	}()
 
 	srv := server.NewCounterServer(authService, userService, jwtService)
 

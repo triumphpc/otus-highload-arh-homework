@@ -43,7 +43,7 @@ func main() {
 	// 3. Репозитории
 	userRepo := postgres2.NewUserRepository(pgPool)
 	redisTaskQueue := queue.NewRedisQueue(redisClient)
-	userUseCase := userUC.New(userRepo, redisTaskQueue)
+	userUseCase := userUC.New(userRepo, redisTaskQueue, nil)
 
 	srv, err := grpcServer.New(userUseCase, cfg.Dialog.Address)
 	if err != nil {

@@ -14,7 +14,7 @@ type counterQueue interface {
 }
 
 type cacher interface {
-	Set(ctx context.Context, key string, value any, ttl time.Duration)
+	Set(ctx context.Context, key string, value any, ttl time.Duration) error
 	Get(ctx context.Context, key string, dest any) error
 }
 

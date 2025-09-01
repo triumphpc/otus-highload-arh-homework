@@ -17,6 +17,7 @@ type UserRepository interface {
 	GetFriendsIDs(ctx context.Context, userID int) ([]int, error)
 	StoreDialogMessage(ctx context.Context, senderID, recipientID int64, content string) (int64, error)
 	GetDialogMessages(ctx context.Context, senderID, recipientID int64) ([]*entity.DialogMessage, error)
+	GetUnreadMessagesCount(ctx context.Context, userID int64) (int, error)
 }
 
 // PostRepository определяет контракт для работы с хранилищем постов

@@ -98,6 +98,28 @@ services:
         timeout: 5s
         retries: 3
 
+    counters:
+      container_name: counters
+      build:
+        context: ..
+        dockerfile: docker/counters/Dockerfile
+      ports:
+        - "8084:8081"
+      depends_on:
+        redis:
+          condition: service_healthy
+      env_file:
+        - .env
+      networks:
+        - app-network
+      restart: unless-stopped
+      healthcheck:
+        test: [ "CMD", "wget", "-q", "-O", "-", "http://localhost:8081/health" ]
+        interval: 10s
+        timeout: 5s
+        retries: 3
+        start_period: 30s
+
     feed-updater:
       container_name: feed-updater
       build:

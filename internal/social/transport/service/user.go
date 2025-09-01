@@ -18,6 +18,8 @@ type userUserCase interface {
 	Search(ctx context.Context, firstName, lastName string) ([]*entity.User, error)
 	SendDialogMessage(ctx context.Context, senderID, receiverID int64, text string) error
 	GetDialogMessages(ctx context.Context, user1ID, user2ID int64) ([]*entity.DialogMessage, error)
+	UpdateDialogMessagesUnreadCounter(ctx context.Context, currentUserID int64) error
+	DialogMessagesUnreadCount(ctx context.Context, currentUserID int64) (int64, error)
 }
 
 type friendUseCase interface {
@@ -236,4 +238,12 @@ func (s *UserService) GetDialogMessagesV2(ctx context.Context, currentUserID int
 	}
 
 	return result, nil
+}
+
+func (s *UserService) UpdateDialogMessagesUnreadCounter(ctx context.Context, currentUserID int64) error {
+	return s.userUC.UpdateDialogMessagesUnreadCounter(ctx, currentUserID)
+}
+
+func (s *UserService) DialogMessagesUnreadCount(ctx context.Context, currentUserID int64) (int64, error) {
+	return s.userUC.DialogMessagesUnreadCount(ctx, currentUserID)
 }

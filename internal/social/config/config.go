@@ -39,11 +39,12 @@ type HTTP struct {
 }
 
 type HTTPCounter struct {
-	Port            string        `env:"HTTP_PORT" env-default:"8081"`
-	ReadTimeout     time.Duration `env:"HTTP_READ_TIMEOUT" env-default:"5s"`
-	WriteTimeout    time.Duration `env:"HTTP_WRITE_TIMEOUT" env-default:"5s"`
-	IdleTimeout     time.Duration `env:"HTTP_IDLE_TIMEOUT" env-default:"30s"`
-	ShutdownTimeout time.Duration `env:"HTTP_SHUTDOWN_TIMEOUT" env-default:"10s"`
+	Port            string        `env:"HTTP_COUNTER_PORT" env-default:"8081"`
+	ReadTimeout     time.Duration `env:"HTTP_COUNTER_READ_TIMEOUT" env-default:"5s"`
+	WriteTimeout    time.Duration `env:"HTTP_COUNTER_WRITE_TIMEOUT" env-default:"5s"`
+	IdleTimeout     time.Duration `env:"HTTP_COUNTER_IDLE_TIMEOUT" env-default:"30s"`
+	ShutdownTimeout time.Duration `env:"HTTP_COUNTER_SHUTDOWN_TIMEOUT" env-default:"10s"`
+	NumWorkers      uint8         `env:"HTTP_COUNTER_NUM_WORKERS" env-default:"8"`
 }
 
 type WS struct {

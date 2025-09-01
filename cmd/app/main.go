@@ -109,7 +109,7 @@ func main() {
 
 	// 5. Бизнес слои
 	authUseCase := authUC.NewAuth(userRepo, hasher, cacheWarmer)
-	userUseCase := userUC.New(userRepo, redisTaskQueue)
+	userUseCase := userUC.New(userRepo, redisTaskQueue, nil)
 	friendUseCase := userUC.NewFriendUseCase(userRepo)
 	postUseCase := postUC.NewPostUseCase(postRepo)
 

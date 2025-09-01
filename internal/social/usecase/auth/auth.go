@@ -47,31 +47,31 @@ func (uc *AuthUseCase) Register(ctx context.Context, user *entity.User, password
 		return nil, repository.ErrUserAlreadyExists
 	}
 
-	go func(user entity.User, password string) {
-		var err error
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-		defer func() {
-			if err != nil {
-				delErr := uc.emailCasher.DeleteEmail(ctx, user.Email)
-				err = errors.Join(err, delErr)
-				log.Println(fmt.Errorf("email check failed: %w", err))
-			}
-
-			cancel()
-		}()
-		// 3. Асинхронное сохранение в основном storage
-		hash, err := uc.hasher.Hash(password)
+	//go func(user entity.User, password string) {
+	//	var err error
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer func() {
 		if err != nil {
-			return
+			delErr := uc.emailCasher.DeleteEmail(ctx, user.Email)
+			err = errors.Join(err, delErr)
+			log.Println(fmt.Errorf("email check failed: %w", err))
 		}
 
-		// 4. Сохранение
-		if err := uc.repo.Create(ctx, &user, hash); err != nil {
-			return
-		}
+		cancel()
+	}()
+	// 3. Асинхронное сохранение в основном storage
+	hash, err := uc.hasher.Hash(password)
+	if err != nil {
+		return nil, err
+	}
 
-		log.Println("user registered async")
-	}(*user, password)
+	// 4. Сохранение
+	if err := uc.repo.Create(ctx, user, hash); err != nil {
+		return nil, err
+	}
+
+	log.Println("user registered async")
+	//}(*user, password)
 
 	log.Println("user registered done")
 
