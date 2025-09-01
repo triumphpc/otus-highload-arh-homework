@@ -24,6 +24,7 @@ import (
 	"otus-highload-arh-homework/pkg/clients/kafka"
 	"otus-highload-arh-homework/pkg/clients/pg"
 	"otus-highload-arh-homework/pkg/clients/redis"
+	"otus-highload-arh-homework/pkg/queue"
 
 	"github.com/pressly/goose/v3"
 )
@@ -103,11 +104,12 @@ func main() {
 
 	// 4. Инициализация очереди и CacheWarmer
 	redisQueue := cachewarmer.NewRedisQueue(redisClient)
+	redisTaskQueue := queue.NewRedisQueue(redisClient)
 	cacheWarmer := cachewarmer.New(redisQueue, redisClient)
 
 	// 5. Бизнес слои
 	authUseCase := authUC.NewAuth(userRepo, hasher, cacheWarmer)
-	userUseCase := userUC.New(userRepo)
+	userUseCase := userUC.New(userRepo, redisTaskQueue)
 	friendUseCase := userUC.NewFriendUseCase(userRepo)
 	postUseCase := postUC.NewPostUseCase(postRepo)
 

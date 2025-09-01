@@ -370,3 +370,8 @@ func (h *UserHandler) GetDialogMessagesV2(c *gin.Context) {
 
 	c.JSON(http.StatusOK, messages)
 }
+
+func (h *UserHandler) GetUnreadDialogMessagesCount(c *gin.Context) {
+	currentUserID := c.MustGet("userID").(int)
+
+}
