@@ -370,3 +370,29 @@ func (h *UserHandler) GetDialogMessagesV2(c *gin.Context) {
 
 	c.JSON(http.StatusOK, messages)
 }
+
+// GetUnreadDialogMessagesCount godoc
+// @Summary Получить количество непрочитанных сообщений в диалогах
+// @Tags dialog-v2
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} dto.SuccessCountResponse "Объект с количеством непрочитанных сообщений"
+// @Header 200 {string} x-request-id "Идентификатор запроса"
+// @Failure 500 {object} dto.ErrorResponse "Ошибка сервера"
+// @Router /api/v2/dialog/unread-count [get]
+func (h *UserHandler) GetUnreadDialogMessagesCount(c *gin.Context) {
+	currentUserID := c.MustGet("userID").(int)
+
+	count, err := h.userService.DialogMessagesUnreadCount(c.Request.Context(), int64(currentUserID))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse{
+			Error:   "Failed to get DialogMessagesCount",
+			Details: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessCountResponse{
+		Count: count,
+	})
+}

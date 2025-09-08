@@ -125,3 +125,7 @@ type SuccessResponseV2 struct {
 	RequestID string      `json:"request_id"`
 	Timestamp time.Time   `json:"timestamp"`
 }
+
+type SuccessCountResponse struct {
+	Count int64 `json:"count"`
+}

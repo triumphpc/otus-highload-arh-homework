@@ -3,17 +3,29 @@ package user
 import (
 	"context"
 	"errors"
+	"time"
 
 	"otus-highload-arh-homework/internal/social/entity"
 	"otus-highload-arh-homework/internal/social/repository"
 )
 
-type UserUseCase struct {
-	repo repository.UserRepository
+type counterQueue interface {
+	PushCounterRecalc(ctx context.Context, userID int64) error
 }
 
-func New(repo repository.UserRepository) *UserUseCase {
-	return &UserUseCase{repo: repo}
+type cacher interface {
+	Set(ctx context.Context, key string, value any, ttl time.Duration) error
+	Get(ctx context.Context, key string, dest any) error
+}
+
+type UserUseCase struct {
+	repo         repository.UserRepository
+	counterQueue counterQueue
+	cacher       cacher
+}
+
+func New(repo repository.UserRepository, counterQueue counterQueue, cacher cacher) *UserUseCase {
+	return &UserUseCase{repo: repo, counterQueue: counterQueue, cacher: cacher}
 }
 
 func (uc *UserUseCase) GetByID(ctx context.Context, id int) (*entity.User, error) {

@@ -12,6 +12,8 @@ import (
 	grpcServer "otus-highload-arh-homework/internal/social/transport/server/dialog/grpc"
 	userUC "otus-highload-arh-homework/internal/social/usecase/user"
 	"otus-highload-arh-homework/pkg/clients/pg"
+	"otus-highload-arh-homework/pkg/clients/redis"
+	"otus-highload-arh-homework/pkg/queue"
 )
 
 func main() {
@@ -28,9 +30,20 @@ func main() {
 	}
 	defer pgPool.Close()
 
+	redisClient, err := redis.New(ctx, &cfg.Redis)
+	if err != nil {
+		log.Fatalf("Failed to initialize Redis: %v", err)
+	}
+	defer func() {
+		if err := redis.Close(redisClient); err != nil {
+			log.Printf("Failed to close Redis connection: %v", err)
+		}
+	}()
+
 	// 3. Репозитории
 	userRepo := postgres2.NewUserRepository(pgPool)
-	userUseCase := userUC.New(userRepo)
+	redisTaskQueue := queue.NewRedisQueue(redisClient)
+	userUseCase := userUC.New(userRepo, redisTaskQueue, nil)
 
 	srv, err := grpcServer.New(userUseCase, cfg.Dialog.Address)
 	if err != nil {

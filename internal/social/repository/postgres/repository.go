@@ -427,3 +427,20 @@ func (r *UserRepository) GetDialogMessages(ctx context.Context, senderID, recipi
 
 	return messages, nil
 }
+
+// GetUnreadMessagesCount возвращает количество непрочитанных сообщений для пользователя
+func (r *UserRepository) GetUnreadMessagesCount(ctx context.Context, userID int64) (int, error) {
+	const query = `
+        SELECT COUNT(*)
+        FROM messages
+        WHERE recipient_id = $1 AND read_at IS NULL
+    `
+
+	var count int
+	err := r.pool.QueryRow(ctx, query, userID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get unread messages count: %w", err)
+	}
+
+	return count, nil
+}
