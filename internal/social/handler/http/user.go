@@ -12,6 +12,7 @@ import (
 	"otus-highload-arh-homework/internal/social/repository"
 	"otus-highload-arh-homework/internal/social/transport/dto"
 	"otus-highload-arh-homework/internal/social/transport/service"
+	"otus-highload-arh-homework/pkg/clients/prometheus"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -233,6 +234,9 @@ func (h *UserHandler) SendDialogMessage(c *gin.Context) {
 		})
 		return
 	}
+
+	senderIDStr := strconv.Itoa(senderID)
+	prometheus.IncMessagesSent(senderIDStr, receiverIDStr)
 
 	c.JSON(http.StatusOK, dto.SuccessResponse{
 		Status:  "success",

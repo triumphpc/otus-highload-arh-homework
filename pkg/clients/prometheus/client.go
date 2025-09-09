@@ -9,6 +9,7 @@ import (
 )
 
 var (
+	// RED метрики
 	httpRequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_requests_total",
@@ -25,11 +26,43 @@ var (
 		},
 		[]string{"method", "path", "status"},
 	)
+
+	// бизнес метрики
+	userRegistrationsTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "app_user_registrations_total",
+			Help: "Total number of user registrations",
+		},
+	)
+	userLoginAttemptsTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "app_user_login_attempts_total",
+			Help: "Total number of login attempts",
+		},
+		[]string{"success"}, // "true" или "false"
+	)
+	postsCreatedTotal = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "app_posts_created_total",
+			Help: "Total number of posts created",
+		},
+	)
+	messagesSentTotal = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "app_messages_sent_total",
+			Help: "Total number of dialog messages sent",
+		},
+		[]string{"from_user_id", "to_user_id"},
+	)
 )
 
 func init() {
 	prometheus.MustRegister(httpRequestsTotal)
 	prometheus.MustRegister(httpRequestDuration)
+	prometheus.MustRegister(userRegistrationsTotal)
+	prometheus.MustRegister(userLoginAttemptsTotal)
+	prometheus.MustRegister(postsCreatedTotal)
+	prometheus.MustRegister(messagesSentTotal)
 }
 
 func MetricsMiddleware() gin.HandlerFunc {
@@ -46,4 +79,31 @@ func MetricsMiddleware() gin.HandlerFunc {
 		httpRequestsTotal.WithLabelValues(method, path, strconv.Itoa(status)).Inc()
 		httpRequestDuration.WithLabelValues(method, path, strconv.Itoa(status)).Observe(duration)
 	}
+}
+
+// PUBLIC METHODS FOR BUSINESS METRICS
+
+// IncUserRegistrations увеличивает счетчик регистраций пользователей
+func IncUserRegistrations() {
+	userRegistrationsTotal.Inc()
+}
+
+// IncLoginAttempts увеличивает счетчик попыток входа
+// success: true - успешный вход, false - неуспешный
+func IncLoginAttempts(success bool) {
+	status := "false"
+	if success {
+		status = "true"
+	}
+	userLoginAttemptsTotal.WithLabelValues(status).Inc()
+}
+
+// IncPostsCreated увеличивает счетчик созданных постов
+func IncPostsCreated() {
+	postsCreatedTotal.Inc()
+}
+
+// IncMessagesSent увеличивает счетчик отправленных сообщений
+func IncMessagesSent(fromUserID, toUserID string) {
+	messagesSentTotal.WithLabelValues(fromUserID, toUserID).Inc()
 }

@@ -2,7 +2,7 @@
 -- +goose StatementBegin
 DROP TABLE IF EXISTS users CASCADE;
 
-CREATE TABLE IF EXISTS  users (
+CREATE TABLE IF NOT EXISTS  users (
                        id BIGSERIAL PRIMARY KEY,
                        first_name TEXT NOT NULL,
                        last_name TEXT NOT NULL,
@@ -18,7 +18,7 @@ CREATE TABLE IF EXISTS  users (
 
 SELECT create_distributed_table('users', 'id');
 
-CREATE TABLE IF EXISTS dialogs (
+CREATE TABLE IF NOT EXISTS dialogs (
                          dialog_id BIGSERIAL,
                          user1_id BIGINT NOT NULL,
                          user2_id BIGINT NOT NULL,
@@ -27,11 +27,11 @@ CREATE TABLE IF EXISTS dialogs (
                          CONSTRAINT user_order CHECK (user1_id < user2_id)
 );
 
-CREATE INDEX IF EXISTS  idx_dialogs_user_pair ON dialogs (user1_id, user2_id);
+CREATE INDEX IF NOT EXISTS  idx_dialogs_user_pair ON dialogs (user1_id, user2_id);
 
 SELECT create_distributed_table('dialogs', 'user1_id', colocate_with => 'users');
 
-CREATE TABLE IF EXISTS  messages (
+CREATE TABLE IF NOT EXISTS  messages (
                           message_id BIGSERIAL,
                           dialog_id BIGINT NOT NULL,
                           sender_id BIGINT NOT NULL,  -- Будем колоцировать с users.id

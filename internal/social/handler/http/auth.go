@@ -10,6 +10,7 @@ import (
 	"otus-highload-arh-homework/internal/social/transport"
 	"otus-highload-arh-homework/internal/social/transport/dto"
 	auth2 "otus-highload-arh-homework/internal/social/transport/service"
+	"otus-highload-arh-homework/pkg/clients/prometheus"
 
 	"github.com/gin-gonic/gin"
 )
@@ -53,6 +54,8 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		h.handleAuthError(c, err)
 		return
 	}
+
+	prometheus.IncUserRegistrations()
 
 	// Успешный ответ
 	c.JSON(http.StatusCreated, gin.H{
@@ -108,8 +111,12 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	userResponse, token, err := h.authService.Login(c.Request.Context(), input.Email, input.Password)
 	if err != nil {
 		h.handleAuthError(c, err)
+		prometheus.IncLoginAttempts(false)
+
 		return
 	}
+
+	prometheus.IncLoginAttempts(true)
 
 	// Успешный ответ
 	c.JSON(http.StatusOK, gin.H{
